@@ -49,3 +49,17 @@ def load_10_year_treasury_data():
     fred = Fred(api_key=fred_api_key)
     treasury_10 = fred.get_series('DGS10')
     return treasury_10
+
+def match_treasury_indices(sp_data):
+    """
+    Match the indices of the 10-year Treasury yield data with the S&P 500 index data.
+
+    Parameters:
+    - sp_data (DataFrame): The historical S&P 500 index data.
+
+    Returns:
+    - DataFrame: A DataFrame containing the matched 10-year Treasury yield data.
+    """
+    treasury_10 = load_10_year_treasury_data()
+    treasury_10 = treasury_10[treasury_10.index.isin(sp_data.index)].to_frame(name='10Y_Treasury_Yield')
+    return treasury_10
