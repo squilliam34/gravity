@@ -39,6 +39,8 @@ def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str =
     """
     stock_data = load_prices(ticker, start_date, end_date, interval)
     stock_data = calculate_20_day_ma(stock_data)
+    stock_data = calculate_momentum(stock_data)
+    stock_data.dropna(inplace=True)
     return stock_data
 
 def calculate_20_day_ma(stock_data: pd.DataFrame):
