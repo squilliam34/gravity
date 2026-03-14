@@ -25,7 +25,7 @@ def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str =
 
 def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
     """
-    Load historical S&P 500 index data.
+    Load historical S&P 500 index data and calculate its daily yield.
 
     Parameters:
     - start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
@@ -36,7 +36,21 @@ def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today()
     - DataFrame: A DataFrame containing the historical S&P 500 index data.
     """
     sp = load_stock_data('^GSPC', start_date, end_date, interval)
+    sp = get_sp500_yield(sp)
     return sp
+
+def get_sp500_yield(sp_data: pd.DataFrame):
+    """
+    Calculate the daily percentage change (yield) of the S&P 500 index.
+
+    Parameters:
+    - sp_data (DataFrame): The historical S&P 500 index data.
+
+    Returns:
+    - DataFrame: A DataFrame containing the S&P 500 index data with the daily percentage change (yield).
+    """
+    sp_data['Yield'] = sp_data['Close'].pct_change()
+    return sp_data
 
 def load_10_year_treasury_data():
     """"
