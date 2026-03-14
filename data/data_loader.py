@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fredapi import Fred
 import pandas as pd
 
-def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
+def load_prices(ticker: str, start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
     """
     Load historical stock price data for a given ticker symbol.
 
@@ -21,6 +21,37 @@ def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str =
     stock = yf.Ticker(ticker)
     stock_data = stock.history(start=start_date, end=end_date, interval=interval)
     stock_data.index = stock_data.index.date  
+    stock_data = stock_data.drop(columns=['Open', 'High', 'Low', 'Volume', 'Dividends', 'Stock Splits'])
+    return stock_data
+
+def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
+    """
+    Load historical stock price data for a given ticker symbol.
+
+    Parameters:
+    - ticker (str): The stock ticker symbol (e.g., 'NVDA').
+    - start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
+    - end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
+    - interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
+
+    Returns:
+    - DataFrame: A DataFrame containing the historical stock price data.
+    """
+    stock_data = load_prices(ticker, start_date, end_date, interval)
+    stock_data = calculate_20_day_ma(stock_data)
+    return stock_data
+
+def calculate_20_day_ma(stock_data: pd.DataFrame):
+    """
+    Calculate the 20-day moving average for the given stock data.
+
+    Parameters:
+    - stock_data (DataFrame): The historical stock price data.
+
+    Returns:
+    - DataFrame: A DataFrame containing the original stock data with an additional column for the 20-day moving average.
+    """
+    stock_data['20_day_MA'] = stock_data['Close'].rolling(window=20).mean()
     return stock_data
 
 def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
@@ -35,9 +66,8 @@ def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today()
     Returns:
     - DataFrame: A DataFrame containing the historical S&P 500 index data.
     """
-    sp = load_stock_data('^GSPC', start_date, end_date, interval)
+    sp = load_prices('^GSPC', start_date, end_date, interval)
     sp = get_sp500_yield(sp)
-    sp = sp.drop(columns=['Open', 'High', 'Low', 'Volume', 'Dividends', 'Stock Splits'])
     return sp
 
 def get_sp500_yield(sp_data: pd.DataFrame):
