@@ -54,6 +54,19 @@ def calculate_20_day_ma(stock_data: pd.DataFrame):
     stock_data['20_day_MA'] = stock_data['Close'].rolling(window=20).mean()
     return stock_data
 
+def calculate_momentum(stock_data: pd.DataFrame):
+    """
+    Calculate the momentum of the stock based on the 20-day moving average.
+
+    Parameters:
+    - stock_data (DataFrame): The historical stock price data with the 20-day moving average.
+
+    Returns:
+    - DataFrame: A DataFrame containing the original stock data with an additional column for momentum.
+    """
+    stock_data['Momentum'] = (stock_data['Close'] - stock_data['20_day_MA']) / stock_data['Close']
+    return stock_data
+
 def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
     """
     Load historical S&P 500 index data and calculate its daily yield.
