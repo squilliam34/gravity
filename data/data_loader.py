@@ -41,6 +41,8 @@ def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str =
     stock_data = calculate_20_day_ma(stock_data)
     stock_data = calculate_momentum(stock_data)
     stock_data.dropna(inplace=True)
+    stock_data = calculate_stock_returns(stock_data)
+    stock_data.drop(columns=['Close'], inplace=True)
     return stock_data
 
 def calculate_20_day_ma(stock_data: pd.DataFrame):
@@ -67,6 +69,19 @@ def calculate_momentum(stock_data: pd.DataFrame):
     - DataFrame: A DataFrame containing the original stock data with an additional column for momentum.
     """
     stock_data['Momentum'] = (stock_data['Close'] - stock_data['20_day_MA']) / stock_data['Close']
+    return stock_data
+
+def calculate_stock_returns(stock_data: pd.DataFrame):
+    """
+    Calculate the daily percentage change (returns) of the stock.
+
+    Parameters:
+    - stock_data (DataFrame): The historical stock price data.
+
+    Returns:
+    - DataFrame: A DataFrame containing the original stock data with an additional column for daily returns.
+    """
+    stock_data['Returns'] = stock_data['Close'].pct_change()
     return stock_data
 
 def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
