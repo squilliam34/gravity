@@ -47,7 +47,6 @@ def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str =
         stock_data = calculate_momentum(stock_data)
         stock_data.dropna(inplace=True)
         stock_data = calculate_stock_returns(stock_data)
-        stock_data.drop(columns=['Close'], inplace=True)
         return stock_data
     except Exception as e:
         print(f"[load_stock_data] failed for {ticker}: {e}")
@@ -69,6 +68,8 @@ def calculate_20_day_ma(stock_data: pd.DataFrame):
 def calculate_momentum(stock_data: pd.DataFrame):
     """
     Calculate the momentum of the stock based on the 20-day moving average.
+    Use the previous day's closing price and the previous day's 20-day moving average to calculate momentum
+    so that the factor model isn't using future information.
 
     Parameters:
     - stock_data (DataFrame): The historical stock price data with the 20-day moving average.
@@ -76,7 +77,10 @@ def calculate_momentum(stock_data: pd.DataFrame):
     Returns:
     - DataFrame: A DataFrame containing the original stock data with an additional column for momentum.
     """
-    stock_data['Momentum'] = (stock_data['Close'] - stock_data['20_day_MA']) / stock_data['Close']
+    close_prev = stock_data['Close'].shift(1)
+    ma_prev = stock_data['20_day_MA'].shift(1)
+
+    stock_data['Momentum'] = (close_prev - ma_prev) / close_prev
     return stock_data
 
 def calculate_stock_returns(stock_data: pd.DataFrame):
