@@ -37,6 +37,7 @@ def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today()
     """
     sp = load_stock_data('^GSPC', start_date, end_date, interval)
     sp = get_sp500_yield(sp)
+    sp = sp.drop(columns=['Open', 'High', 'Low', 'Volume', 'Dividends', 'Stock Splits'])
     return sp
 
 def get_sp500_yield(sp_data: pd.DataFrame):
