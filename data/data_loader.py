@@ -47,6 +47,7 @@ def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str =
         stock_data = calculate_momentum(stock_data)
         stock_data.dropna(inplace=True)
         stock_data = calculate_stock_returns(stock_data)
+        stock_data = stock_data.drop(columns=['Close'])
         return stock_data
     except Exception as e:
         print(f"[load_stock_data] failed for {ticker}: {e}")
