@@ -3,6 +3,7 @@ from datetime import date
 import os
 from dotenv import load_dotenv
 from fredapi import Fred
+import pandas as pd
 
 def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
     """
@@ -39,7 +40,7 @@ def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today()
 
 def load_10_year_treasury_data():
     """"
-    Load historical 10-year Treasury yield data from FRED.
+    Load historical 10-year Treasury yield data from FRED and process it.
 
     Returns:
     - Series: A Series containing the historical 10-year Treasury yield data.
@@ -48,18 +49,34 @@ def load_10_year_treasury_data():
     fred_api_key = os.getenv('FRED')
     fred = Fred(api_key=fred_api_key)
     treasury_10 = fred.get_series('DGS10')
+    treasury_10 = match_treasury_indices(load_sp500_data(), treasury_10)
+    treasury_10 = calculate_treasury_diff(treasury_10)
     return treasury_10
 
-def match_treasury_indices(sp_data):
+def match_treasury_indices(sp_data: pd.DataFrame, treasury_10: pd.Series):
     """
     Match the indices of the 10-year Treasury yield data with the S&P 500 index data.
 
     Parameters:
     - sp_data (DataFrame): The historical S&P 500 index data.
+    - treasury_10 (Series): The historical 10-year Treasury yield data.
 
     Returns:
     - DataFrame: A DataFrame containing the matched 10-year Treasury yield data.
     """
-    treasury_10 = load_10_year_treasury_data()
     treasury_10 = treasury_10[treasury_10.index.isin(sp_data.index)].to_frame(name='10Y_Treasury_Yield')
+    return treasury_10
+
+def calculate_treasury_diff(treasury_10: pd.DataFrame):
+    """
+    Process the 10-year Treasury yield data by calculating the daily difference 
+    and match the indices with the S&P 500 index data.
+
+    Parameters:
+    - treasury_10 (DataFrame): The historical 10-year Treasury yield data.
+
+    Returns:
+    - DataFrame: A DataFrame containing the processed 10-year Treasury yield data.
+    """
+    treasury_10['diff'] = treasury_10['10Y_Treasury_Yield'].diff()
     return treasury_10
