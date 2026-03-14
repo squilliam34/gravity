@@ -128,14 +128,15 @@ def calculate_treasury_diff(treasury_10: pd.DataFrame):
 
 def match_indices(treasury: pd.DataFrame, sp: pd.DataFrame, stock: pd.DataFrame):
     """
-    Match the indices of df2 with the indices of df1.
+    Match the indices of treasury and S&P data with the indices of stock data.
 
     Parameters:
-    - df1 (DataFrame): A DataFrame whose indices are used as the reference for matching.
-    - df2 (DataFrame): Another DataFrame whose indices needs to be matched.
+    - treasury (DataFrame): The historical 10-year Treasury yield data.
+    - sp (DataFrame): The historical S&P 500 index data.
+    - stock (DataFrame): The historical stock price data.
 
     Returns:
-    - DataFrame: A DataFrame containing the matched 10-year Treasury yield data.
+    - Tuple[DataFrame, DataFrame]: A tuple containing the matched treasury and S&P data.
     """
     treasury = treasury[treasury.index.isin(stock.index)]
     sp = sp[sp.index.isin(stock.index)]
