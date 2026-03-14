@@ -108,23 +108,8 @@ def load_10_year_treasury_data():
     load_dotenv()
     fred_api_key = os.getenv('FRED')
     fred = Fred(api_key=fred_api_key)
-    treasury_10 = fred.get_series('DGS10')
-    treasury_10 = match_treasury_indices(load_sp500_data(), treasury_10)
+    treasury_10 = fred.get_series('DGS10').to_frame(name='10Y_Treasury_Yield')
     treasury_10 = calculate_treasury_diff(treasury_10)
-    return treasury_10
-
-def match_treasury_indices(sp_data: pd.DataFrame, treasury_10: pd.Series):
-    """
-    Match the indices of the 10-year Treasury yield data with the S&P 500 index data.
-
-    Parameters:
-    - sp_data (DataFrame): The historical S&P 500 index data.
-    - treasury_10 (Series): The historical 10-year Treasury yield data.
-
-    Returns:
-    - DataFrame: A DataFrame containing the matched 10-year Treasury yield data.
-    """
-    treasury_10 = treasury_10[treasury_10.index.isin(sp_data.index)].to_frame(name='10Y_Treasury_Yield')
     return treasury_10
 
 def calculate_treasury_diff(treasury_10: pd.DataFrame):
@@ -140,3 +125,18 @@ def calculate_treasury_diff(treasury_10: pd.DataFrame):
     """
     treasury_10['diff'] = treasury_10['10Y_Treasury_Yield'].diff()
     return treasury_10
+
+def match_indices(treasury: pd.DataFrame, sp: pd.DataFrame, stock: pd.DataFrame):
+    """
+    Match the indices of df2 with the indices of df1.
+
+    Parameters:
+    - df1 (DataFrame): A DataFrame whose indices are used as the reference for matching.
+    - df2 (DataFrame): Another DataFrame whose indices needs to be matched.
+
+    Returns:
+    - DataFrame: A DataFrame containing the matched 10-year Treasury yield data.
+    """
+    treasury = treasury[treasury.index.isin(stock.index)]
+    sp = sp[sp.index.isin(stock.index)]
+    return treasury, sp
