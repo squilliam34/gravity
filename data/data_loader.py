@@ -141,3 +141,31 @@ def match_indices(treasury: pd.DataFrame, sp: pd.DataFrame, stock: pd.DataFrame)
     treasury = treasury[treasury.index.isin(stock.index)]
     sp = sp[sp.index.isin(stock.index)]
     return treasury, sp
+
+def load_merged_data(tickers: list[str], start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
+    """
+    Load and merge historical stock price data, S&P 500 index data, and 10-year Treasury yield data for a list of ticker symbols.
+
+    Parameters:
+    - tickers (list[str]): A list of stock ticker symbols to load data for (e.g., ['NVDA', 'AAPL']).
+
+    Returns:
+    - DataFrame: A DataFrame containing the merged data for the stocks, S&P 500 index, and 10-year Treasury yield.
+    """
+    treasury = load_10_year_treasury_data()
+    sp = load_sp500_data(start_date, end_date, interval)
+    
+    stock_data_frames = []
+    for ticker in tickers:
+        stock_data = load_stock_data(ticker, start_date, end_date, interval)
+        stock_data_frames.append(stock_data)
+    
+    merged_data = pd.concat(stock_data_frames, axis=1, keys=tickers)
+    merged_data = merged_data.dropna()
+    
+    treasury, sp = match_indices(treasury, sp, merged_data)
+    
+    final = pd.concat([merged_data, sp['Yield'], treasury['diff']], axis=1).dropna(inplace=True)
+    final.dropna(inplace=True)
+    
+    return final
