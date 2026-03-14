@@ -18,11 +18,15 @@ def load_prices(ticker: str, start_date: str = '2000-01-01', end_date: str = dat
     Returns:
     - DataFrame: A DataFrame containing the historical stock price data.
     """
-    stock = yf.Ticker(ticker)
-    stock_data = stock.history(start=start_date, end=end_date, interval=interval)
-    stock_data.index = stock_data.index.date  
-    stock_data = stock_data.drop(columns=['Open', 'High', 'Low', 'Volume', 'Dividends', 'Stock Splits'])
-    return stock_data
+    try:
+        stock = yf.Ticker(ticker)
+        stock_data = stock.history(start=start_date, end=end_date, interval=interval)
+        stock_data.index = stock_data.index.date
+        stock_data = stock_data.drop(columns=['Open', 'High', 'Low', 'Volume', 'Dividends', 'Stock Splits'])
+        return stock_data
+    except Exception as e:
+        print(f"[load_prices] failed for {ticker}: {e}")
+        return pd.DataFrame()
 
 def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
     """
@@ -37,13 +41,17 @@ def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str =
     Returns:
     - DataFrame: A DataFrame containing the historical stock price data.
     """
-    stock_data = load_prices(ticker, start_date, end_date, interval)
-    stock_data = calculate_20_day_ma(stock_data)
-    stock_data = calculate_momentum(stock_data)
-    stock_data.dropna(inplace=True)
-    stock_data = calculate_stock_returns(stock_data)
-    stock_data.drop(columns=['Close'], inplace=True)
-    return stock_data
+    try:
+        stock_data = load_prices(ticker, start_date, end_date, interval)
+        stock_data = calculate_20_day_ma(stock_data)
+        stock_data = calculate_momentum(stock_data)
+        stock_data.dropna(inplace=True)
+        stock_data = calculate_stock_returns(stock_data)
+        stock_data.drop(columns=['Close'], inplace=True)
+        return stock_data
+    except Exception as e:
+        print(f"[load_stock_data] failed for {ticker}: {e}")
+        return pd.DataFrame()
 
 def calculate_20_day_ma(stock_data: pd.DataFrame):
     """
@@ -96,9 +104,13 @@ def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today()
     Returns:
     - DataFrame: A DataFrame containing the historical S&P 500 index data.
     """
-    sp = load_prices('^GSPC', start_date, end_date, interval)
-    sp = get_sp500_yield(sp)
-    return sp
+    try:
+        sp = load_prices('^GSPC', start_date, end_date, interval)
+        sp = get_sp500_yield(sp)
+        return sp
+    except Exception as e:
+        print(f"[load_sp500_data] failed: {e}")
+        return pd.DataFrame()
 
 def get_sp500_yield(sp_data: pd.DataFrame):
     """
@@ -118,14 +130,21 @@ def load_10_year_treasury_data():
     Load historical 10-year Treasury yield data from FRED and process it.
 
     Returns:
-    - Series: A Series containing the historical 10-year Treasury yield data.
+    - DataFrame: A DataFrame containing the historical 10-year Treasury yield data.
     """
-    load_dotenv()
-    fred_api_key = os.getenv('FRED')
-    fred = Fred(api_key=fred_api_key)
-    treasury_10 = fred.get_series('DGS10').to_frame(name='10Y_Treasury_Yield')
-    treasury_10 = calculate_treasury_diff(treasury_10)
-    return treasury_10
+    try:
+        load_dotenv()
+        fred_api_key = os.getenv('FRED')
+        if not fred_api_key:
+            raise RuntimeError('FRED API key not found in environment variables.')
+
+        fred = Fred(api_key=fred_api_key)
+        treasury_10 = fred.get_series('DGS10').to_frame(name='10Y_Treasury_Yield')
+        treasury_10 = calculate_treasury_diff(treasury_10)
+        return treasury_10
+    except Exception as e:
+        print(f"[load_10_year_treasury_data] failed: {e}")
+        return pd.DataFrame()
 
 def calculate_treasury_diff(treasury_10: pd.DataFrame):
     """
@@ -167,20 +186,27 @@ def load_merged_data(tickers: list[str], start_date: str = '2000-01-01', end_dat
     Returns:
     - DataFrame: A DataFrame containing the merged data for the stocks, S&P 500 index, and 10-year Treasury yield.
     """
-    treasury = load_10_year_treasury_data()
-    sp = load_sp500_data(start_date, end_date, interval)
-    
-    stock_data_frames = []
-    for ticker in tickers:
-        stock_data = load_stock_data(ticker, start_date, end_date, interval)
-        stock_data_frames.append(stock_data)
-    
-    merged_data = pd.concat(stock_data_frames, axis=1, keys=tickers)
-    merged_data = merged_data.dropna()
-    
-    treasury, sp = match_indices(treasury, sp, merged_data)
-    
-    final = pd.concat([merged_data, sp['Yield'], treasury['diff']], axis=1).dropna(inplace=True)
-    final.dropna(inplace=True)
-    
-    return final
+    try:
+        treasury = load_10_year_treasury_data()
+        sp = load_sp500_data(start_date, end_date, interval)
+
+        stock_data_frames = []
+        for ticker in tickers:
+            stock_data = load_stock_data(ticker, start_date, end_date, interval)
+            if stock_data.empty:
+                print(f"[load_merged_data] warning: no data for ticker {ticker}")
+            stock_data_frames.append(stock_data)
+
+        if not stock_data_frames:
+            return pd.DataFrame()
+
+        merged_data = pd.concat(stock_data_frames, axis=1, keys=tickers)
+        merged_data = merged_data.dropna()
+
+        treasury, sp = match_indices(treasury, sp, merged_data)
+
+        final = pd.concat([merged_data, sp.get('Yield', pd.Series()), treasury.get('diff', pd.Series())], axis=1).dropna()
+        return final
+    except Exception as e:
+        print(f"[load_merged_data] failed: {e}")
+        return pd.DataFrame()
