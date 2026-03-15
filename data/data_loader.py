@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fredapi import Fred
 import pandas as pd
 
-def load_prices(ticker: str, start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
+def load_prices(ticker: str, start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d') -> pd.DataFrame:
     """
     Load historical stock price data for a given ticker symbol.
 
@@ -28,7 +28,7 @@ def load_prices(ticker: str, start_date: str = '2000-01-01', end_date: str = dat
         print(f"[load_prices] failed for {ticker}: {e}")
         return pd.DataFrame()
 
-def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
+def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d') -> pd.DataFrame:
     """
     Load historical stock price data for a given ticker symbol.
 
@@ -53,7 +53,7 @@ def load_stock_data(ticker: str, start_date: str = '2000-01-01', end_date: str =
         print(f"[load_stock_data] failed for {ticker}: {e}")
         return pd.DataFrame()
 
-def calculate_20_day_ma(stock_data: pd.DataFrame):
+def calculate_20_day_ma(stock_data: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate the 20-day moving average for the given stock data.
 
@@ -66,7 +66,7 @@ def calculate_20_day_ma(stock_data: pd.DataFrame):
     stock_data['20_day_MA'] = stock_data['Close'].rolling(window=20).mean()
     return stock_data
 
-def calculate_momentum(stock_data: pd.DataFrame):
+def calculate_momentum(stock_data: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate the momentum of the stock based on the 20-day moving average.
     Use the previous day's closing price and the previous day's 20-day moving average to calculate momentum
@@ -84,7 +84,7 @@ def calculate_momentum(stock_data: pd.DataFrame):
     stock_data['Momentum'] = (close_prev - ma_prev) / close_prev
     return stock_data
 
-def calculate_stock_returns(stock_data: pd.DataFrame):
+def calculate_stock_returns(stock_data: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate the daily percentage change (returns) of the stock.
 
@@ -97,7 +97,7 @@ def calculate_stock_returns(stock_data: pd.DataFrame):
     stock_data['Returns'] = stock_data['Close'].pct_change()
     return stock_data
 
-def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
+def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d') -> pd.DataFrame:
     """
     Load historical S&P 500 index data and calculate its daily yield.
 
@@ -117,7 +117,7 @@ def load_sp500_data(start_date: str = '2000-01-01', end_date: str = date.today()
         print(f"[load_sp500_data] failed: {e}")
         return pd.DataFrame()
 
-def get_sp500_yield(sp_data: pd.DataFrame):
+def get_sp500_yield(sp_data: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate the daily percentage change (yield) of the S&P 500 index.
 
@@ -130,7 +130,7 @@ def get_sp500_yield(sp_data: pd.DataFrame):
     sp_data['Market Return'] = sp_data['Close'].pct_change()
     return sp_data
 
-def load_10_year_treasury_data():
+def load_10_year_treasury_data() -> pd.DataFrame:
     """"
     Load historical 10-year Treasury yield data from FRED and process it.
 
@@ -151,7 +151,7 @@ def load_10_year_treasury_data():
         print(f"[load_10_year_treasury_data] failed: {e}")
         return pd.DataFrame()
 
-def calculate_treasury_diff(treasury_10: pd.DataFrame):
+def calculate_treasury_diff(treasury_10: pd.DataFrame) -> pd.DataFrame:
     """
     Process the 10-year Treasury yield data by calculating the daily difference 
     and match the indices with the S&P 500 index data.
@@ -165,7 +165,7 @@ def calculate_treasury_diff(treasury_10: pd.DataFrame):
     treasury_10['Rate Change'] = treasury_10['10Y_Treasury_Yield'].diff()
     return treasury_10
 
-def match_indices(treasury: pd.DataFrame, sp: pd.DataFrame, stock: pd.DataFrame):
+def match_indices(treasury: pd.DataFrame, sp: pd.DataFrame, stock: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Match the indices of treasury and S&P data with the indices of stock data.
 
@@ -181,7 +181,7 @@ def match_indices(treasury: pd.DataFrame, sp: pd.DataFrame, stock: pd.DataFrame)
     sp = sp[sp.index.isin(stock.index)]
     return treasury, sp
 
-def load_merged_data(tickers: list[str], start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d'):
+def load_merged_data(tickers: list[str], start_date: str = '2000-01-01', end_date: str = date.today().strftime('%Y-%m-%d'), interval: str = '1d') -> pd.DataFrame:
     """
     Load and merge historical stock price data, S&P 500 index data, and 10-year Treasury yield data for a list of ticker symbols.
 
