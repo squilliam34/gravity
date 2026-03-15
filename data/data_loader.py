@@ -127,7 +127,7 @@ def get_sp500_yield(sp_data: pd.DataFrame):
     Returns:
     - DataFrame: A DataFrame containing the S&P 500 index data with the daily percentage change (yield).
     """
-    sp_data['Yield'] = sp_data['Close'].pct_change()
+    sp_data['Market Return'] = sp_data['Close'].pct_change()
     return sp_data
 
 def load_10_year_treasury_data():
@@ -162,7 +162,7 @@ def calculate_treasury_diff(treasury_10: pd.DataFrame):
     Returns:
     - DataFrame: A DataFrame containing the processed 10-year Treasury yield data.
     """
-    treasury_10['diff'] = treasury_10['10Y_Treasury_Yield'].diff()
+    treasury_10['Rate Change'] = treasury_10['10Y_Treasury_Yield'].diff()
     return treasury_10
 
 def match_indices(treasury: pd.DataFrame, sp: pd.DataFrame, stock: pd.DataFrame):
@@ -210,7 +210,7 @@ def load_merged_data(tickers: list[str], start_date: str = '2000-01-01', end_dat
 
         treasury, sp = match_indices(treasury, sp, merged_data)
 
-        final = pd.concat([merged_data, sp.get('Yield', pd.Series()), treasury.get('diff', pd.Series())], axis=1).dropna()
+        final = pd.concat([merged_data, sp.get('Market Return', pd.Series()), treasury.get('Rate Change', pd.Series())], axis=1).dropna()
         return final
     except Exception as e:
         print(f"[load_merged_data] failed: {e}")
