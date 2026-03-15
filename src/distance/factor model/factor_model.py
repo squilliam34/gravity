@@ -10,13 +10,14 @@ def get_data(FILEPATH: str) -> tuple[list[str], pd.DataFrame]:
     - FILEPATH (str): The file path to the CSV file containing the ticker symbols.
 
     Returns:
-    - Tuple[list[str], pd.DataFrame]: A tuple containing the list of ticker symbols 
+    - Tuple[list[str], pd.DataFrame]: A tuple containing the list of valid ticker symbols 
     and the merged data DataFrame.
     """
     # Assume csv file has a column named 'Ticker' with the list of ticker symbols
     try:
         tickers = pd.read_excel(FILEPATH)['Ticker'].tolist()
-        return tickers, load_merged_data(tickers)
+        valid_tickers, merged_data = load_merged_data(tickers)
+        return valid_tickers, merged_data
     except Exception as e:
         print(f"Error occurred while loading data: {e}")
         return None, pd.DataFrame()

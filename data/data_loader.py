@@ -216,24 +216,27 @@ def load_merged_data(tickers: list[str],
     (e.g., ['NVDA', 'AAPL']).
 
     Returns:
-    - DataFrame: A DataFrame containing the merged data for the stocks, S&P 500 index, 
-    and 10-year Treasury yield.
+    - Tuple[list[str], DataFrame]: A tuple containing the list of valid ticker symbols 
+    and the merged DataFrame for the stocks, S&P 500 index, and 10-year Treasury yield.
     """
     try:
         treasury = load_10_year_treasury_data()
         sp = load_sp500_data(start_date, end_date, interval)
 
         stock_data_frames = []
+        valid_tickers = []
         for ticker in tickers:
             stock_data = load_stock_data(ticker, start_date, end_date, interval)
             if stock_data.empty:
-                print(f"[load_merged_data] warning: no data for ticker {ticker}")
+                print(f'[load_merged_data] warning: no data for ticker {ticker}')
+                continue
             stock_data_frames.append(stock_data)
+            valid_tickers.append(ticker)
 
         if not stock_data_frames:
             return pd.DataFrame()
 
-        merged_data = pd.concat(stock_data_frames, axis=1, keys=tickers)
+        merged_data = pd.concat(stock_data_frames, axis=1, keys=valid_tickers)
         merged_data = merged_data.dropna()
 
         treasury, sp = match_indices(treasury, sp, merged_data)
@@ -242,7 +245,7 @@ def load_merged_data(tickers: list[str],
                            sp.get('Market Return', pd.Series()), 
                            treasury.get('Rate Change', pd.Series())], 
                            axis=1).dropna()
-        return final
+        return valid_tickers, final
     except Exception as e:
         print(f"[load_merged_data] failed: {e}")
         return pd.DataFrame()
