@@ -237,14 +237,14 @@ def load_factor_data(tickers: list[str],
             return pd.DataFrame()
 
         merged_data = pd.concat(stock_data_frames, axis=1, keys=valid_tickers)
-        merged_data = merged_data.dropna()
+        merged_data = merged_data
 
         treasury, sp = match_indices(treasury, sp, merged_data)
 
         final = pd.concat([merged_data, 
                            sp.get('Market Return', pd.Series()), 
                            treasury.get('Rate Change', pd.Series())], 
-                           axis=1).dropna()
+                           axis=1)
         return valid_tickers, final
     except Exception as e:
         print(f"[load_merged_data] failed: {e}")

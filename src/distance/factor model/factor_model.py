@@ -1,4 +1,4 @@
-from data.data_loader import load_merged_data
+from data.data_loader import load_factor_data
 import statsmodels.api as sm
 import pandas as pd
 
@@ -16,7 +16,7 @@ def get_data(FILEPATH: str) -> tuple[list[str], pd.DataFrame]:
     # Assume csv file has a column named 'Ticker' with the list of ticker symbols
     try:
         tickers = pd.read_excel(FILEPATH)['Ticker'].tolist()
-        valid_tickers, merged_data = load_merged_data(tickers)
+        valid_tickers, merged_data = load_factor_data(tickers)
         return valid_tickers, merged_data
     except Exception as e:
         print(f"Error occurred while loading data: {e}")
