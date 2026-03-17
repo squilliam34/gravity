@@ -237,7 +237,6 @@ def load_factor_data(tickers: list[str],
             return pd.DataFrame()
 
         merged_data = pd.concat(stock_data_frames, axis=1, keys=valid_tickers)
-        merged_data = merged_data
 
         treasury, sp = match_indices(treasury, sp, merged_data)
 
