@@ -51,18 +51,18 @@ def calculate_rolling_betas(data: pd.DataFrame,
         date = data.index[t]
 
         for ticker in tickers:
-
+            ticker_momentum_key = (ticker, 'Momentum')
             y = window_data[(ticker, 'Returns')]
 
-            X = window_data[[(ticker, 'Momentum')]].copy()
+            X = window_data[[ticker_momentum_key, 'Market Return', 'Rate Change']]
+            valid = pd.concat([y, X], axis=1).dropna()
+            if len(valid) < 150:
+                continue   
 
-            X['Market Return'] = window_data['Market Return']
-            X['Rate Change'] = window_data['Rate Change']
+            y_valid = valid[(ticker, 'Returns')]
+            X_valid = valid[[ticker_momentum_key, 'Market Return', 'Rate Change']]
 
-            model = sm.OLS(y, sm.add_constant(X)).fit()
-
-            ticker_momentum_key = (ticker, 'Momentum')
-
+            model = sm.OLS(y_valid, sm.add_constant(X_valid)).fit()
             results.append({
                 'date': date,
                 'ticker': ticker,
