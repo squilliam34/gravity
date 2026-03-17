@@ -202,7 +202,7 @@ def match_indices(treasury: pd.DataFrame,
     sp = sp[sp.index.isin(stock.index)]
     return treasury, sp
 
-def load_merged_data(tickers: list[str], 
+def load_factor_data(tickers: list[str], 
                      start_date: str = '2000-01-01', 
                      end_date: str = date.today().strftime('%Y-%m-%d'), 
                      interval: str = '1d'
