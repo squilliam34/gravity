@@ -244,6 +244,8 @@ def load_factor_data(tickers: list[str],
                            sp.get('Market Return', pd.Series()), 
                            treasury.get('Rate Change', pd.Series())], 
                            axis=1)
+        final.index = pd.to_datetime(final.index)
+        final.index.strftime('%Y/%m/%d')
         return valid_tickers, final
     except Exception as e:
         print(f"[load_merged_data] failed: {e}")
