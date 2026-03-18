@@ -216,8 +216,7 @@ def load_factor_data(tickers: list[str],
     (e.g., ['NVDA', 'AAPL']).
 
     Returns:
-    - Tuple[list[str], DataFrame]: A tuple containing the list of valid ticker symbols 
-    and the merged DataFrame for the stocks, S&P 500 index, and 10-year Treasury yield.
+    - DataFrame: The merged DataFrame for the stocks, S&P 500 index, and 10-year Treasury yield.
     """
     try:
         treasury = load_10_year_treasury_data()
@@ -246,7 +245,7 @@ def load_factor_data(tickers: list[str],
                            axis=1)
         final.index = pd.to_datetime(final.index)
         final.index.strftime('%Y/%m/%d')
-        return valid_tickers, final
+        return final
     except Exception as e:
         print(f"[load_merged_data] failed: {e}")
         return pd.DataFrame()
