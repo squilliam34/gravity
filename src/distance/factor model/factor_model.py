@@ -158,20 +158,21 @@ def compute_distances(betas, features = ['beta_market', 'beta_rate', 'beta_momen
     - DataFrame: A DataFrame containing the distances between each stock for each window.
     """
     results = []
-
-    for date, snapshot in betas.groupby("date"):
-
+    
+    # Ensure 'date' and 'ticker' exist in columns
+    if 'date' not in betas.columns or 'ticker' not in betas.columns:
+        betas = betas.reset_index()
+    for date, snapshot in betas.groupby('date'):
         distances = mahalanobis_distance(snapshot, features)
+        tickers = snapshot['ticker'].values
 
-        tickers = snapshot["ticker"].values
+        # Get indices of upper triangle (excluding diagonal)
+        triu_idx = np.triu_indices(len(tickers), k=1)
+        results.append(pd.DataFrame({
+            'date': date,
+            'stock_i': tickers[triu_idx[0]],
+            'stock_j': tickers[triu_idx[1]],
+            'distance': distances[triu_idx]
+        }))
 
-        for i in range(len(tickers)):
-            for j in range(i+1, len(tickers)):
-                results.append({
-                    "date": date,
-                    "stock_i": tickers[i],
-                    "stock_j": tickers[j],
-                    "distance": distances[i, j]
-                })
-
-    return pd.DataFrame(results)
+    return pd.concat(results, ignore_index=True)
