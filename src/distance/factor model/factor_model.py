@@ -118,9 +118,12 @@ def calculate_rolling_betas(data: pd.DataFrame,
     df = pd.DataFrame(results)
     df.set_index(['date', 'ticker'], inplace=True)
 
-def mahalanobis_distance(snapshot: pd.DataFrame, features: list[str] = ['beta_market', 
-                                                                        'beta_rate', 
-                                                                        'beta_momentum']):
+def mahalanobis_distance(snapshot: pd.DataFrame, 
+                         features: list[str] = [
+                             'beta_market', 
+                             'beta_rate', 
+                             'beta_momentum'
+                             ]):
     """
     Calculate the Mahalanobis Distance between stocks at a given window in time for the given features.
 
@@ -145,7 +148,12 @@ def mahalanobis_distance(snapshot: pd.DataFrame, features: list[str] = ['beta_ma
     dist_matrix = squareform(pdist(X, metric='mahalanobis', VI=inv_cov))
     return dist_matrix
 
-def compute_distances(betas, features = ['beta_market', 'beta_rate', 'beta_momentum']):
+def compute_distances(betas: pd.DataFrame, 
+                      features: list[str] = [
+                          'beta_market',
+                          'beta_rate',
+                          'beta_momentum'
+                          ]):
     """
     Calculate the Mahalanobis Distances for each point in time across all stocks available at that point.
 
