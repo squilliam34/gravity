@@ -1,5 +1,4 @@
 from data.data_loader import load_factor_data
-import statsmodels.api as sm
 import pandas as pd
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -25,7 +24,6 @@ def get_data(FILEPATH: str) -> tuple[list[str], pd.DataFrame]:
         return None, pd.DataFrame()
     
 def calculate_rolling_betas(data: pd.DataFrame, 
-                            tickers: list, 
                             window: int = 252, 
                             step: int = 42
                             ) -> pd.DataFrame:
@@ -36,7 +34,6 @@ def calculate_rolling_betas(data: pd.DataFrame,
     Parameters:
     - data (DataFrame): The merged DataFrame containing stock returns, 
     market returns, rate changes, and momentum.
-    - tickers (list): A list of ticker symbols for which to calculate the rolling betas.
     - window (int): The size of the rolling window (default is 252 trading days, 
     approximately one year).
     - step (int): The step size for rolling the window (default is 42 trading days, 
@@ -45,36 +42,81 @@ def calculate_rolling_betas(data: pd.DataFrame,
     Returns:
     - DataFrame: A DataFrame containing the rolling betas for each stock and factor over time.
     """
+    # Get which columns are ticker dependent
+    ticker_cols = [col for col in data.columns if isinstance(col, tuple)]
+    ticker_data = data[ticker_cols]
+
+    # Convert to MultiIndex if column is ticker dependent
+    ticker_data.columns = pd.MultiIndex.from_tuples(ticker_data.columns)
+
+    # Slice data so that tickers are now column names
+    returns_df = ticker_data.xs('Returns', level=1, axis=1)
+    momentum_df = ticker_data.xs('Momentum', level=1, axis=1)
+
+    market = data['Market Return'].values
+    rate = data['Rate Change'].values
+    returns = returns_df.values        # (T, N)
+    momentum = momentum_df.values      # (T, N)
+    tickers = returns_df.columns.tolist()
+
     results = []
 
     for t in range(window, len(data), step):
 
-        window_data = data.iloc[t-window:t]
-        date = data.index[t]
+        # Get the date and ensure proper format
+        date = data.index[t].strftime('%Y/%m/%d')
 
-        for ticker in tickers:
-            ticker_momentum_key = (ticker, 'Momentum')
-            y = window_data[(ticker, 'Returns')]
+        Y = returns[t-window:t, :]
+        MOM = momentum[t-window:t, :]
+        MKT = market[t-window:t]
+        RATE = rate[t-window:t]
 
-            X = window_data[[ticker_momentum_key, 'Market Return', 'Rate Change']]
-            valid = pd.concat([y, X], axis=1).dropna()
-            # If the number of entries available is less than the threshold, continue onto next
-            if len(valid) < 150:
-                continue   
+        for i, ticker in enumerate(tickers):
 
-            y_valid = valid[(ticker, 'Returns')]
-            X_valid = valid[[ticker_momentum_key, 'Market Return', 'Rate Change']]
+            y_i = Y[:, i]
+            mom_i = MOM[:, i]
 
-            model = sm.OLS(y_valid, sm.add_constant(X_valid)).fit()
+            # Checks how many entries are totally NaN
+            mask = (
+                ~np.isnan(y_i) &
+                ~np.isnan(mom_i) &
+                ~np.isnan(MKT) &
+                ~np.isnan(RATE)
+            )
+
+            # If a window has less than 150 valid entries, continue on
+            # Check to ensure we have enough data for the ticker in the window
+            if np.sum(mask) < 150:
+                continue
+
+            # Stack columns into a matric
+            X_i = np.column_stack([
+                np.ones(np.sum(mask)),
+                MKT[mask],
+                RATE[mask],
+                mom_i[mask]
+            ])
+
+            y_clean = y_i[mask]
+
+            # OLS solution for beta = (X^TX)^-1 (X^Ty)
+            XtX = X_i.T @ X_i
+            XtY = X_i.T @ y_clean
+            # Computes betas with small regularization if XtX is singular
+            beta = np.linalg.solve(
+                XtX + 1e-8 * np.eye(XtX.shape[0]),
+                XtY
+            )
+            
             results.append({
                 'date': date,
                 'ticker': ticker,
-                'beta_market': model.params['Market Return'],
-                'beta_rate': model.params['Rate Change'],
-                'beta_momentum': model.params[ticker_momentum_key]
+                'beta_market': beta[1],
+                'beta_rate': beta[2],
+                'beta_momentum': beta[3]
             })
-
-    return pd.DataFrame(results)
+    df = pd.DataFrame(results)
+    df.set_index(['date', 'ticker'], inplace=True)
 
 def mahalanobis_distance(snapshot: pd.DataFrame, features: list[str] = ['beta_market', 
                                                                         'beta_rate', 
