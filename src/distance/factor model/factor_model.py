@@ -58,6 +58,7 @@ def calculate_rolling_betas(data: pd.DataFrame,
 
             X = window_data[[ticker_momentum_key, 'Market Return', 'Rate Change']]
             valid = pd.concat([y, X], axis=1).dropna()
+            # If the number of entries available is less than the threshold, continue onto next
             if len(valid) < 150:
                 continue   
 
@@ -94,9 +95,9 @@ def mahalanobis_distance(snapshot: pd.DataFrame, features: list[str] = ['beta_ma
     """
     X = snapshot[features].values
     cov = np.cov(X, rowvar=False)
-    # add small regularization in case cov is singular
-    # adding a tiny amount of variance to each factor
-    # and removing perfect multicollinearity
+    # Add small regularization in case cov is singular
+    # Adding a tiny amount of variance to each factor
+    # And removing perfect multicollinearity
     cov += np.eye(cov.shape[0]) * 1e-6
     inv_cov = np.linalg.inv(cov)
     dist_matrix = squareform(pdist(X, metric='mahalanobis', VI=inv_cov))
