@@ -87,7 +87,10 @@ def mahalanobis_distance(snapshot: pd.DataFrame, features: list[str] = ['beta_ma
 
     Parameters:
     - snapshot (DataFrame): The DataFrame containing the stocks and their factor attributions at a point in time.
-    - features: list[str]: A list of features to use in order to calculate the Mahalanobis Distance.
+    - features: (list[str]): A list of features to use in order to calculate the Mahalanobis Distance.
+
+    Returns:
+    - DataFrame: A DataFrame containing the Mahalanobis Distance between stocks for the designated period.
     """
     X = snapshot[features].values
     cov = np.cov(X, rowvar=False)
@@ -98,3 +101,34 @@ def mahalanobis_distance(snapshot: pd.DataFrame, features: list[str] = ['beta_ma
     inv_cov = np.linalg.inv(cov)
     dist_matrix = squareform(pdist(X, metric='mahalanobis', VI=inv_cov))
     return dist_matrix
+
+def compute_distances(betas, features = ['beta_market', 'beta_rate', 'beta_momentum']):
+    """
+    Calculate the Mahalanobis Distances for each point in time across all stocks available at that point.
+
+    Parameters:
+    - betas (DataFrame): The DataFrame containing the list of companies, periods, and betas to compute
+    the distance for.
+    - features (list[str]): A list of the features to use to calculate the distance for.
+
+    Returns:
+    - DataFrame: A DataFrame containing the distances between each stock for each window.
+    """
+    results = []
+
+    for date, snapshot in betas.groupby("date"):
+
+        distances = mahalanobis_distance(snapshot, features)
+
+        tickers = snapshot["ticker"].values
+
+        for i in range(len(tickers)):
+            for j in range(i+1, len(tickers)):
+                results.append({
+                    "date": date,
+                    "stock_i": tickers[i],
+                    "stock_j": tickers[j],
+                    "distance": distances[i, j]
+                })
+
+    return pd.DataFrame(results)
