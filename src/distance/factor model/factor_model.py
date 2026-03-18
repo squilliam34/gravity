@@ -64,7 +64,7 @@ def calculate_rolling_betas(data: pd.DataFrame,
     for t in range(window, len(data), step):
 
         # Get the date and ensure proper format
-        date = data.index[t].strftime('%Y/%m/%d')
+        date = data.index[t].strftime('%Y-%m-%d')
 
         Y = returns[t-window:t, :]
         MOM = momentum[t-window:t, :]
@@ -107,7 +107,7 @@ def calculate_rolling_betas(data: pd.DataFrame,
                 XtX + 1e-8 * np.eye(XtX.shape[0]),
                 XtY
             )
-            
+
             results.append({
                 'date': date,
                 'ticker': ticker,

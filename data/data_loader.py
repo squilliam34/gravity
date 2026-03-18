@@ -244,7 +244,7 @@ def load_factor_data(tickers: list[str],
                            treasury.get('Rate Change', pd.Series())], 
                            axis=1)
         final.index = pd.to_datetime(final.index)
-        final.index.strftime('%Y/%m/%d')
+        final.index.strftime('%Y-%m-%d')
         return final
     except Exception as e:
         print(f"[load_merged_data] failed: {e}")
