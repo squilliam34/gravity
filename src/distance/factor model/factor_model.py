@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
-def get_data(FILEPATH: str) -> tuple[list[str], pd.DataFrame]:
+def get_data(FILEPATH: str) -> pd.DataFrame:
     """
     Load the list of ticker symbols from a CSV file.
 
@@ -11,17 +11,16 @@ def get_data(FILEPATH: str) -> tuple[list[str], pd.DataFrame]:
     - FILEPATH (str): The file path to the CSV file containing the ticker symbols.
 
     Returns:
-    - Tuple[list[str], pd.DataFrame]: A tuple containing the list of valid ticker symbols 
-    and the merged data DataFrame.
+    - DataFrame: The DataFrame containing stock price data, 10-Year Treasury data, and 
+    S&P returns
     """
     # Assume csv file has a column named 'Ticker' with the list of ticker symbols
     try:
         tickers = pd.read_excel(FILEPATH)['Ticker'].tolist()
-        valid_tickers, merged_data = load_factor_data(tickers)
-        return valid_tickers, merged_data
+        return load_factor_data(tickers)
     except Exception as e:
         print(f"Error occurred while loading data: {e}")
-        return None, pd.DataFrame()
+        return pd.DataFrame()
     
 def calculate_rolling_betas(data: pd.DataFrame, 
                             window: int = 252, 
@@ -123,7 +122,7 @@ def mahalanobis_distance(snapshot: pd.DataFrame,
                              'beta_market', 
                              'beta_rate', 
                              'beta_momentum'
-                             ]):
+                             ]) -> pd.DataFrame:
     """
     Calculate the Mahalanobis Distance between stocks at a given window in time for the given features.
 
@@ -153,7 +152,7 @@ def compute_distances(betas: pd.DataFrame,
                           'beta_market',
                           'beta_rate',
                           'beta_momentum'
-                          ]):
+                          ]) -> pd.DataFrame:
     """
     Calculate the Mahalanobis Distances for each point in time across all stocks available at that point.
 
