@@ -1,6 +1,8 @@
 from data.data_loader import load_factor_data
 import statsmodels.api as sm
 import pandas as pd
+import numpy as np
+from scipy.spatial.distance import pdist, squareform
 
 def get_data(FILEPATH: str) -> tuple[list[str], pd.DataFrame]:
     """
@@ -72,3 +74,27 @@ def calculate_rolling_betas(data: pd.DataFrame,
             })
 
     return pd.DataFrame(results)
+
+def mahalanobis_distance(snapshot: pd.DataFrame, features: list[str] = ['beta_market', 
+                                                                        'beta_rate', 
+                                                                        'beta_momentum']):
+    """
+    Calculate the Mahalanobis Distance between stocks at a given window in time for the given features.
+
+    The Mahalanobis Distance is a multi-dimensional measure of the distance between a point and a distribution. 
+    Unlike Euclidean distance, which treats all variables equally and assumes they are independent, Mahalanobis 
+    distance accounts for the correlations between variables and is scale-invariant.
+
+    Parameters:
+    - snapshot (DataFrame): The DataFrame containing the stocks and their factor attributions at a point in time.
+    - features: list[str]: A list of features to use in order to calculate the Mahalanobis Distance.
+    """
+    X = snapshot[features].values
+    cov = np.cov(X, rowvar=False)
+    # add small regularization in case cov is singular
+    # adding a tiny amount of variance to each factor
+    # and removing perfect multicollinearity
+    cov += np.eye(cov.shape[0]) * 1e-6
+    inv_cov = np.linalg.inv(cov)
+    dist_matrix = squareform(pdist(X, metric='mahalanobis', VI=inv_cov))
+    return dist_matrix
