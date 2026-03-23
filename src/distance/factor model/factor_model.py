@@ -1,4 +1,4 @@
-from data.data_loader import load_factor_data
+from data.data_loader import load_factor_data, get_tickers
 import pandas as pd
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -16,7 +16,7 @@ def get_data(FILEPATH: str) -> pd.DataFrame:
     """
     # Assume csv file has a column named 'Ticker' with the list of ticker symbols
     try:
-        tickers = pd.read_excel(FILEPATH)['Ticker'].tolist()
+        tickers = get_tickers(FILEPATH)
         return load_factor_data(tickers)
     except Exception as e:
         print(f"Error occurred while loading data: {e}")

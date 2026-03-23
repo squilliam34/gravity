@@ -5,6 +5,19 @@ from dotenv import load_dotenv
 from fredapi import Fred
 import pandas as pd
 
+def get_tickers(FILEPATH: str) -> list[str]:
+    """
+    Extract tickers from a csv file of tickers.
+
+    Parameters
+    - FILENAME (str): The path to the file with tickers to extract.
+
+    Returns 
+    - list[str]: A list of tickers.
+    """
+    # Assume csv file has a column named 'Ticker' with the list of ticker symbols
+    return pd.read_excel(FILEPATH)['Ticker'].tolist()
+
 def load_prices(ticker: str, 
                 start_date: str = '2000-01-01', 
                 end_date: str = date.today().strftime('%Y-%m-%d'), 
