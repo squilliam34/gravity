@@ -3,6 +3,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 import tiktoken
 from sentence_transformers import SentenceTransformer
 import numpy as np
+import pandas as pd
 from data.data_loader import get_tickers
 
 def get_yf_summary(ticker: str) -> str:
@@ -104,3 +105,27 @@ def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
     dist = 1 - np.clip(matrix @ matrix.T, -1, 1)
     np.fill_diagonal(dist, 0.0)
     return dist
+
+def get_semantic_distances(FILEPATH: str) -> pd.DataFrame:
+    """
+    Takes a file containing tickers and calculates the differences in semantic meaning
+    between them. It embeds a description of each company's operations and calculates a 
+    distance measure using the cosine similarity between each stock.
+
+    Parameters:
+    - FILEPATH (str): The path to the file containing the tickers to calculate distances
+    between.
+
+    Returns:
+    - pd.DataFrame: A DataFrame that represents a matrix of distances, indexed by ticker symbols.
+    """
+    tickers = get_tickers(FILEPATH=FILEPATH)
+
+    # Create array containing embeddings for each company
+    matrix = np.array([embed_text(get_yf_summary(ticker)) for ticker in tickers])
+
+    # Calculate distances between each company using cosine similarity (1-cos(theta))
+    distance_matrix = calculate_cosine_similarity_distance(matrix)
+
+    # Return DataFrame of distances indexed by ticker
+    return pd.DataFrame(distance_matrix, index=tickers, columns=tickers)
