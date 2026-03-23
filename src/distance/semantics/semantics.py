@@ -101,4 +101,6 @@ def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
     Returns:
     - np.ndarray: A matrix of distance values between every company in the matrix.
     """
-    return 1 - (np.clip(matrix @ matrix.T, -1, 1))
+    dist = 1 - np.clip(matrix @ matrix.T, -1, 1)
+    np.fill_diagonal(dist, 0.0)
+    return dist
