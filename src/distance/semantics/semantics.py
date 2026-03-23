@@ -3,6 +3,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 import tiktoken
 from sentence_transformers import SentenceTransformer
 import numpy as np
+from data.data_loader import get_tickers
 
 def get_yf_summary(ticker: str) -> str:
     """
@@ -83,3 +84,21 @@ def embed_text(text: str,
 
     # Normalize one more time and return
     return normalize(embeddings)
+
+def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
+    """
+    Calculates the distance in semantic meaning between stocks in a matrix using
+    the cosine similarity. Initially calculates the cosine similarity between every
+    company's embeddings within the matrix then subtracts from 1 to arrive at a 
+    distance value. 
+
+    There is no need to divide by the L2 norm of the vectors since each embedding has 
+    already been normalized to have an L2 norm 1.
+
+    Parameters:
+    - matrix (np.ndarray): The matrix of embeddings to calculate distances between.
+
+    Returns:
+    - np.ndarray: A matrix of distance values between every company in the matrix.
+    """
+    return 1 - (np.clip(matrix @ matrix.T, -1, 1))
