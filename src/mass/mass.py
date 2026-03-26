@@ -71,3 +71,43 @@ def create_date_range(start_date: str = '2000-01-01',
     today_pd = pd.to_datetime(end_date)
     next_month = (today_pd + pd.DateOffset(months=1)).strftime('%Y-%m-%d')
     return pd.date_range(start=start_date, end=next_month, freq='ME')
+
+def calculate_market_cap_products(tickers: list[str], 
+                                  start_date: str = '2000-01-01', 
+                                  end_date: str = date.today().strftime('%Y-%m-%d')
+                                  ) -> pd.DataFrame:
+    """
+    Calculate market cap products for every 2 given stocks across a given timeframe.
+
+    Parameters:
+    - tickers (list[str]): A list of tickers in the universe whose masses will be multiplied
+    to populate the matrix.
+    - start_date (str): The start date of the range.
+    - end_date (str): The end date of the range.
+
+    Returns:
+    - pd.DataFrame: A DataFrame that contains every mass product across every window
+    of time in the range of dates.
+    """
+    # Create range of dates
+    dates = create_date_range(start_date=start_date, end_date=end_date)
+    
+    market_cap_matrix = create_market_cap_matrix(tickers)
+    # Now calculate outerproducts between MASS_i and MASS_j
+    mass_matrix = np.einsum('ti,tj->tij', market_cap_matrix, market_cap_matrix)
+
+    # Convert back to df for easy access
+    triu_index = np.triu_indices(len(tickers), 1)
+    tickers_array = np.array(tickers)
+    
+    triu_i, triu_j = triu_index
+
+    num_pairs = len(triu_i)  
+    num_dates = len(dates)   
+
+    return pd.DataFrame({
+            'date': np.repeat(dates, num_pairs),
+            'stock_i': np.tile(tickers_array[triu_i], num_dates),
+            'stock_j': np.tile(tickers_array[triu_j], num_dates),
+            'mass_i * mass_j': mass_matrix[:, triu_i, triu_j].reshape(-1)
+    })
