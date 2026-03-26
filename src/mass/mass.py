@@ -1,6 +1,7 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
+from datetime import date
 
 def calculate_monthly_market_cap(ticker: str, 
                                  start: str = '2000-01-01'
@@ -34,14 +35,14 @@ def create_market_cap_matrix(tickers: list[str]) -> np.ndarray:
     Creates a TxN matrix of monthly market caps, where T is the number
     of time periods, and N is the number of stocks in the universe.
     Market caps are scaled by a factor of 1e9 to avoid future calculation
-    overflow
+    overflow.
 
     Parameters:
-    - tickers (list[str]): A list of stock tickers to populate the matrix with
+    - tickers (list[str]): A list of stock tickers to populate the matrix with.
 
     Returns:
     - np.ndarray: A 2D matrix containing market caps for N stocks across T periods
-    of time
+    of time.
     """
     # Need to put monthly market caps in df first 
     # due to differences in lengths
@@ -52,3 +53,21 @@ def create_market_cap_matrix(tickers: list[str]) -> np.ndarray:
         series_dict[ticker] = s
         market_cap_matrix = pd.DataFrame(series_dict)
     return market_cap_matrix.to_numpy()
+
+def create_date_range(start_date: str = '2000-01-01', 
+                      end_date: str = date.today().strftime('%Y-%m-%d')
+                      ) -> pd.DatetimeIndex:
+    """
+    Helper function to create an accurate range of dates.
+
+    Parameters:
+    - start_date (str): The start date for the range.
+    - end_date (str): The end date for the range.
+
+    Returns:
+    - pd.DatetimeIndex: An index of date ranges.
+    """
+    # Need to offset months by 1 to ensure lengths match
+    today_pd = pd.to_datetime(end_date)
+    next_month = (today_pd + pd.DateOffset(months=1)).strftime('%Y-%m-%d')
+    return pd.date_range(start=start_date, end=next_month, freq='ME')
