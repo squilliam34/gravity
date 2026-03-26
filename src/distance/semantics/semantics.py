@@ -61,7 +61,8 @@ def normalize(array: np.ndarray) -> np.ndarray:
     return array/np.linalg.norm(array)
 
 def embed_text(text: str, 
-               model_name: str='all-MiniLM-L6-v2') -> np.ndarray:
+               model_name: str='all-MiniLM-L6-v2'
+               ) -> np.ndarray:
     """
     Produce a final embedding of chunked text in a single vector. 
 
