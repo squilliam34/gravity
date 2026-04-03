@@ -23,8 +23,8 @@ def get_data(FILEPATH: str) -> pd.DataFrame:
         return pd.DataFrame()
     
 def calculate_rolling_betas(data: pd.DataFrame, 
+                            tickers: list[str],
                             window: int = 252, 
-                            step: int = 42
                             ) -> pd.DataFrame:
     """
     Calculate rolling betas for each stock in the list of tickers using 
@@ -33,17 +33,28 @@ def calculate_rolling_betas(data: pd.DataFrame,
     Parameters:
     - data (DataFrame): The merged DataFrame containing stock returns, 
     market returns, rate changes, and momentum.
+    - tickers (list[str]): The list of tickers to calculate the rolling betas for.
     - window (int): The size of the rolling window (default is 252 trading days, 
     approximately one year).
-    - step (int): The step size for rolling the window (default is 42 trading days, 
-    approximately two months).
 
     Returns:
     - DataFrame: A DataFrame containing the rolling betas for each stock and factor over time.
     """
+    # Sort index
+    data.sort_index()
+    # Create a new column that assigns an end of the month date
+    # for easier tracking 
+    data['month_end'] = data.index.to_period('M').to_timestamp('M')
+
+    month_ends = pd.Index(data['month_end'].drop_duplicates())
+
     # Get which columns are ticker dependent
     ticker_cols = [col for col in data.columns if isinstance(col, tuple)]
     ticker_data = data[ticker_cols]
+
+    # Some rows are completely NaN stock data that have duplicate indices
+    # so drop these
+    data = data[~ticker_data.isna().all(axis=1)]
 
     # Convert to MultiIndex if column is ticker dependent
     ticker_data.columns = pd.MultiIndex.from_tuples(ticker_data.columns)
@@ -60,62 +71,69 @@ def calculate_rolling_betas(data: pd.DataFrame,
 
     results = []
 
-    for t in range(window, len(data), step):
+    # Declare indexer
+    t = 0
+    for date in month_ends:
 
-        # Get the date and ensure proper format
-        date = data.index[t].strftime('%Y-%m-%d')
+        # Select all rows up to and including this month-end
+        window_len = len(data[data['month_end'] <= date].iloc[-window:])
 
-        Y = returns[t-window:t, :]
-        MOM = momentum[t-window:t, :]
-        MKT = market[t-window:t]
-        RATE = rate[t-window:t]
+        # Get number of trading days to increment t by
+        increment = len(data.groupby('month_end').indices[date])
 
-        for i, ticker in enumerate(tickers):
+        # Ensure that t > window:
+        if t > window_len:
 
-            y_i = Y[:, i]
-            mom_i = MOM[:, i]
+            Y = returns[t-window:t, :]
+            MOM = momentum[t-window:t, :]
+            MKT = market[t-window:t]
+            RATE = rate[t-window:t]
 
-            # Checks how many entries are totally NaN
-            mask = (
-                ~np.isnan(y_i) &
-                ~np.isnan(mom_i) &
-                ~np.isnan(MKT) &
-                ~np.isnan(RATE)
-            )
+            for i, ticker in enumerate(tickers):
 
-            # If a window has less than 150 valid entries, continue on
-            # Check to ensure we have enough data for the ticker in the window
-            if np.sum(mask) < 150:
-                continue
+                y_i = Y[:, i]
+                mom_i = MOM[:, i]
 
-            # Stack columns into a matric
-            X_i = np.column_stack([
-                np.ones(np.sum(mask)),
-                MKT[mask],
-                RATE[mask],
-                mom_i[mask]
-            ])
+                mask = (
+                    ~np.isnan(y_i) &
+                    ~np.isnan(mom_i) &
+                    ~np.isnan(MKT) &
+                    ~np.isnan(RATE)
+                )
 
-            y_clean = y_i[mask]
+                if np.sum(mask) < 150:
+                    continue
 
-            # OLS solution for beta = (X^TX)^-1 (X^Ty)
-            XtX = X_i.T @ X_i
-            XtY = X_i.T @ y_clean
-            # Computes betas with small regularization if XtX is singular
-            beta = np.linalg.solve(
-                XtX + 1e-8 * np.eye(XtX.shape[0]),
-                XtY
-            )
+                X_i = np.column_stack([
+                    np.ones(np.sum(mask)),
+                    MKT[mask],
+                    RATE[mask],
+                    mom_i[mask]
+                ])
 
-            results.append({
-                'date': date,
-                'ticker': ticker,
-                'beta_market': beta[1],
-                'beta_rate': beta[2],
-                'beta_momentum': beta[3]
-            })
+                y_clean = y_i[mask]
+
+                XtX = X_i.T @ X_i
+                XtY = X_i.T @ y_clean
+
+                beta = np.linalg.solve(
+                    XtX + 1e-8 * np.eye(XtX.shape[0]),
+                    XtY
+                )
+
+                results.append({
+                    'date': date, 
+                    'ticker': ticker,
+                    'beta_market': beta[1],
+                    'beta_rate': beta[2],
+                    'beta_momentum': beta[3]
+                })
+        
+        t += increment
+
     df = pd.DataFrame(results)
     df.set_index(['date', 'ticker'], inplace=True)
+    return df
 
 def mahalanobis_distance(snapshot: pd.DataFrame, 
                          features: list[str] = [
