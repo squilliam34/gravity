@@ -75,14 +75,11 @@ def calculate_rolling_betas(data: pd.DataFrame,
     t = 0
     for date in month_ends:
 
-        # Select all rows up to and including this month-end
-        window_len = len(data[data['month_end'] <= date].iloc[-window:])
-
         # Get number of trading days to increment t by
         increment = len(data.groupby('month_end').indices[date])
 
         # Ensure that t > window:
-        if t > window_len:
+        if t > window:
 
             Y = returns[t-window:t, :]
             MOM = momentum[t-window:t, :]
