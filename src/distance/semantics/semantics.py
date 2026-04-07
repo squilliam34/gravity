@@ -107,20 +107,19 @@ def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
     np.fill_diagonal(dist, 0.0)
     return dist
 
-def get_semantic_distances(FILEPATH: str) -> pd.DataFrame:
+def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
     """
     Takes a file containing tickers and calculates the differences in semantic meaning
     between them. It embeds a description of each company's operations and calculates a 
     distance measure using the cosine similarity between each stock.
 
     Parameters:
-    - FILEPATH (str): The path to the file containing the tickers to calculate distances
+    - tickers (list[str]): A list of tickers to get the distances between
     between.
 
     Returns:
     - pd.DataFrame: A DataFrame that represents a matrix of distances, indexed by ticker symbols.
     """
-    tickers = get_tickers(FILEPATH=FILEPATH)
 
     # Create array containing embeddings for each company
     matrix = np.array([embed_text(get_yf_summary(ticker)) for ticker in tickers])
