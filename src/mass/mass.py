@@ -25,7 +25,7 @@ def calculate_monthly_market_cap(ticker: str,
     """
     company = yf.Ticker(ticker)
     income_stmt = company.quarterly_income_stmt
-    shares = company.income_stmt[income_stmt.columns[0]]['Basic Average Shares']
+    shares = income_stmt[income_stmt.columns[0]]['Basic Average Shares']
     prices = company.history(start = start)['Close']
     market_caps = (shares*prices).resample('ME').mean()
     return market_caps
