@@ -109,7 +109,7 @@ def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
 
 def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
     """
-    Takes a file containing tickers and calculates the differences in semantic meaning
+    Takes list tickers and calculates the differences in semantic meaning
     between them. It embeds a description of each company's operations and calculates a 
     distance measure using the cosine similarity between each stock.
 
