@@ -51,31 +51,41 @@ def normalize(array: np.ndarray) -> np.ndarray:
     
     return array / np.linalg.norm(array, axis=axis, keepdims=keepdims)
 
-def embed_text(text: str, 
-               model_name: str='all-MiniLM-L6-v2'
+def embed_text(descriptions: list[str], 
+               model_name: str='sentence-transformers/all-mpnet-base-v2'
                ) -> np.ndarray:
     """
-    Produce a final embedding of chunked text in a single vector. 
+    Produces embeddings of business descriptions text in a single matrix. 
 
     Parameters:
-    - text (str): The string to process and generate embeddings for.
+    - descriptions list[str]: A list of company descriptions to embed.
     - model_name (str): The name of the model to use to embed the text.
 
     Returns:
-    - np.ndarray: A singular 1D vector that contains an embedding of the chunked text.
+    - np.ndarray: A matrix that contains embeddings of the company descriptions. 
+      Should return shape of (n x 768), where n is the number of companies.
     """
-    # Chunk text
-    chunks = chunk_text(text)
-    model = SentenceTransformer(model_name)
-    embeddings = [model.encode(chunk) for chunk in chunks]
-    
-    # Normalize embeddings
-    embeddings = [normalize(e) for e in embeddings]
+    # Declare tokenizer and model
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModel.from_pretrained(model_name)
 
-    # Perform mean pooling to combine chunks into one vector
-    embeddings = np.mean(embeddings, axis=0)
+    # Tokenize the texts
+    # Padding and truncation ensure the tensor shapes match up to BERT's 512-token limit
+    inputs = tokenizer(descriptions, padding=True, truncation=True, max_length=512, return_tensors="pt")
 
-    # Normalize one more time and return
+    # Pass inputs through model to extract hidden states
+    with torch.no_grad():
+        model_output = model(**inputs)
+
+    # Perform Mean Pooling to get a single 768-dimensional vector per description
+    token_embeddings = model_output.last_hidden_state 
+    # Use the attention mask to ignore padding tokens so they don't skew the average
+    attention_mask = inputs['attention_mask'].unsqueeze(-1).expand(token_embeddings.size()).float()
+
+    sum_embeddings = torch.sum(token_embeddings * attention_mask, 1)
+    sum_mask = torch.clamp(attention_mask.sum(1), min=1e-9)
+    embeddings = (sum_embeddings / sum_mask).numpy() 
+
     return normalize(embeddings)
 
 def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
