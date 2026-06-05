@@ -1,8 +1,8 @@
 import yfinance as yf
-from sentence_transformers import SentenceTransformer
+import torch
+from transformers import AutoTokenizer, AutoModel
 import numpy as np
 import pandas as pd
-from data.data_loader import get_tickers
 
 def get_yf_summary(ticker: str) -> str:
     """
