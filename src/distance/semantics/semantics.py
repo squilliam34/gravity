@@ -17,6 +17,19 @@ def get_yf_summary(ticker: str) -> str:
     company = yf.Ticker(ticker)
     return company.info['longBusinessSummary']
 
+def clean_text(text: str):
+    """
+    Clean input text by removing punctuation and non-alphanumeric characters and
+    converting to lower case.
+
+    Parameters:
+    - text (str): The input text to clean.
+
+    Returns:
+    - str: The cleaned text.
+    """
+    return re.sub(r'[^a-zA-Z0-9\s]', '', text).lower()
+
 def normalize(array: np.ndarray) -> np.ndarray:
     """
     Normalize a vector using L2 normalization so that its norm equals 1.
