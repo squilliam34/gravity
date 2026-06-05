@@ -120,12 +120,17 @@ def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
     Returns:
     pd.DataFrame: A DataFrame that represents a matrix of distances, indexed by ticker symbols.
     """
+    # Retrieve descriptions
+    print('Retrieving company descriptions...')
+    descriptions = [clean_text(get_yf_summary(ticker)) for ticker in tickers]
 
-    # Create array containing embeddings for each company
-    matrix = np.array([embed_text(get_yf_summary(ticker)) for ticker in tickers])
+    # Embed descriptions
+    print('Embedding descriptions...')
+    embeddings = embed_text(descriptions)
 
+    print('Calculating distances...')
     # Calculate distances between each company using cosine similarity (1-cos(theta))
-    distance_matrix = calculate_cosine_similarity_distance(matrix)
+    matrix = calculate_cosine_similarity_distance(embeddings)
 
     # Return DataFrame of distances indexed by ticker
-    return pd.DataFrame(distance_matrix, index=tickers, columns=tickers)
+    return pd.DataFrame(matrix, index=tickers, columns=tickers)
