@@ -14,14 +14,14 @@ def calculate_monthly_market_cap(ticker: str,
     number of shares by the current amount of shares gives historic monthly market caps. The 
     adjusted prices are resampled and averaged to the end of the month.
 
-    Parameters:
-    - ticker (str): The stock symbol to retrieve the historic market caps for.
-    - start (str): The date to start calculating the market capitalization from in the format
-    YYYY-MM-DD.
+    Args:
+    ticker (str): The stock symbol to retrieve the historic market caps for.
+    start (str): The date to start calculating the market capitalization from in the format 
+      YYYY-MM-DD.
 
     Returns:
-    - pd.Series: A monthly series containing a company's market capitalization at different 
-    points in time.
+    pd.Series: A monthly series containing a company's market capitalization at different points 
+      in time.
     """
     company = yf.Ticker(ticker)
     income_stmt = company.quarterly_income_stmt
@@ -37,12 +37,11 @@ def create_market_cap_matrix(tickers: list[str]) -> np.ndarray:
     Market caps are scaled by a factor of 1e9 to avoid future calculation
     overflow.
 
-    Parameters:
-    - tickers (list[str]): A list of stock tickers to populate the matrix with.
+    Args:
+    tickers (list[str]): A list of stock tickers to populate the matrix with.
 
     Returns:
-    - np.ndarray: A 2D matrix containing market caps for N stocks across T periods
-    of time.
+    np.ndarray: A 2D matrix containing market caps for N stocks across T periods of time.
     """
     # Need to put monthly market caps in df first 
     # due to differences in lengths
@@ -60,12 +59,12 @@ def create_date_range(start_date: str = '2000-01-01',
     """
     Helper function to create an accurate range of dates.
 
-    Parameters:
-    - start_date (str): The start date for the range.
-    - end_date (str): The end date for the range.
+    Args:
+    start_date (str): The start date for the range.
+    end_date (str): The end date for the range.
 
     Returns:
-    - pd.DatetimeIndex: An index of date ranges.
+    pd.DatetimeIndex: An index of date ranges.
     """
     # Need to offset months by 1 to ensure lengths match
     today_pd = pd.to_datetime(end_date)
@@ -79,15 +78,15 @@ def calculate_market_cap_products(tickers: list[str],
     """
     Calculate market cap products for every 2 given stocks across a given timeframe.
 
-    Parameters:
-    - tickers (list[str]): A list of tickers in the universe whose masses will be multiplied
-    to populate the matrix.
-    - start_date (str): The start date of the range.
-    - end_date (str): The end date of the range.
+    Args:
+    tickers (list[str]): A list of tickers in the universe whose masses will be multiplied to 
+      populate the matrix.
+    start_date (str): The start date of the range.
+    end_date (str): The end date of the range.
 
     Returns:
-    - pd.DataFrame: A DataFrame that contains every mass product across every window
-    of time in the range of dates.
+    pd.DataFrame: A DataFrame that contains every mass product across every window 
+      of time in the range of dates.
     """
     # Create range of dates
     dates = create_date_range(start_date=start_date, end_date=end_date)

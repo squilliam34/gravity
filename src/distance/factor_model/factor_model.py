@@ -7,12 +7,12 @@ def get_data(FILEPATH: str) -> pd.DataFrame:
     """
     Load the list of ticker symbols from a CSV file.
 
-    Parameters:
-    - FILEPATH (str): The file path to the CSV file containing the ticker symbols.
+    Args:
+    FILEPATH (str): The file path to the CSV file containing the ticker symbols.
 
     Returns:
-    - DataFrame: The DataFrame containing stock price data, 10-Year Treasury data, and 
-    S&P returns
+    pd.DataFrame: The DataFrame containing stock price data, 10-Year Treasury data, and 
+      S&P returns
     """
     # Assume csv file has a column named 'Ticker' with the list of ticker symbols
     try:
@@ -30,15 +30,15 @@ def calculate_rolling_betas(data: pd.DataFrame,
     Calculate rolling betas for each stock in the list of tickers using 
     a factor model that includes market return, rate change, and momentum.
 
-    Parameters:
-    - data (DataFrame): The merged DataFrame containing stock returns, 
-    market returns, rate changes, and momentum.
-    - tickers (list[str]): The list of tickers to calculate the rolling betas for.
-    - window (int): The size of the rolling window (default is 252 trading days, 
-    approximately one year).
+    Args:
+    data (pd.DataFrame): The merged DataFrame containing stock returns, 
+      market returns, rate changes, and momentum.
+    tickers (list[str]): The list of tickers to calculate the rolling betas for.
+    window (int): The size of the rolling window (default is 252 trading days, 
+      approximately one year).
 
     Returns:
-    - DataFrame: A DataFrame containing the rolling betas for each stock and factor over time.
+    pd.DataFrame: A DataFrame containing the rolling betas for each stock and factor over time.
     """
     # Sort index
     data.sort_index()
@@ -145,12 +145,12 @@ def mahalanobis_distance(snapshot: pd.DataFrame,
     Unlike Euclidean distance, which treats all variables equally and assumes they are independent, Mahalanobis 
     distance accounts for the correlations between variables and is scale-invariant.
 
-    Parameters:
-    - snapshot (DataFrame): The DataFrame containing the stocks and their factor attributions at a point in time.
-    - features: (list[str]): A list of features to use in order to calculate the Mahalanobis Distance.
+    Args:
+    snapshot (pd.DataFrame): The DataFrame containing the stocks and their factor attributions at a point in time.
+    features (list[str]): A list of features to use in order to calculate the Mahalanobis Distance.
 
     Returns:
-    - DataFrame: A DataFrame containing the Mahalanobis Distance between stocks for the designated period.
+    pd.DataFrame: A DataFrame containing the Mahalanobis Distance between stocks for the designated period.
     """
     X = snapshot[features].values
     cov = np.cov(X, rowvar=False)
@@ -171,13 +171,13 @@ def compute_distances(betas: pd.DataFrame,
     """
     Calculate the Mahalanobis Distances for each point in time across all stocks available at that point.
 
-    Parameters:
-    - betas (DataFrame): The DataFrame containing the list of companies, periods, and betas to compute
-    the distance for.
-    - features (list[str]): A list of the features to use to calculate the distance for.
+    Args:
+    betas (DataFrame): The DataFrame containing the list of companies, periods, and betas to compute
+      the distance for.
+    features (list[str]): A list of the features to use to calculate the distance for.
 
     Returns:
-    - DataFrame: A DataFrame containing the distances between each stock for each window.
+    pd.DataFrame: A DataFrame containing the distances between each stock for each window.
     """
     results = []
     

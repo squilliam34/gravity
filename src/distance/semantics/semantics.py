@@ -8,11 +8,11 @@ def get_yf_summary(ticker: str) -> str:
     """
     Retrieves a summary describing the company's operations.
 
-    Parameters:
-    - ticker (str): The stock ticker symbol (e.g., NVDA)
+    Args:
+    ticker (str): The stock ticker symbol (e.g., NVDA)
 
     Returns:
-    - str: A summary of the company.
+    str: A summary of the company.
     """
     company = yf.Ticker(ticker)
     return company.info['longBusinessSummary']
@@ -22,11 +22,11 @@ def clean_text(text: str):
     Clean input text by removing punctuation and non-alphanumeric characters and
     converting to lower case.
 
-    Parameters:
-    - text (str): The input text to clean.
+    Args:
+    text (str): The input text to clean.
 
     Returns:
-    - str: The cleaned text.
+    str: The cleaned text.
     """
     return re.sub(r'[^a-zA-Z0-9\s]', '', text).lower()
 
@@ -38,11 +38,11 @@ def normalize(array: np.ndarray) -> np.ndarray:
     focus on direction rather than magnitude. This is particularly useful when 
     using cosine similarity, where only the angle between vectors matters.
 
-    Parameters:
-    - array (np.ndarray): 1D array (vector) to normalize.
+    Args:
+    array (np.ndarray): 1D array (vector) to normalize.
 
     Returns:
-    - np.ndarray: L2-normalized vector.
+    np.ndarray: L2-normalized vector.
     """
     # If it's a 1D vector, axis=0. If it's a 2D matrix, axis=1.
     axis = 1 if array.ndim > 1 else 0
@@ -57,12 +57,12 @@ def embed_text(descriptions: list[str],
     """
     Produces embeddings of business descriptions text in a single matrix. 
 
-    Parameters:
-    - descriptions list[str]: A list of company descriptions to embed.
-    - model_name (str): The name of the model to use to embed the text.
+    Args:
+    descriptions (list[str]): A list of company descriptions to embed.
+    model_name (str): The name of the model to use to embed the text.
 
     Returns:
-    - np.ndarray: A matrix that contains embeddings of the company descriptions. 
+    np.ndarray: A matrix that contains embeddings of the company descriptions. 
       Should return shape of (n x 768), where n is the number of companies.
     """
     # Declare tokenizer and model
@@ -96,13 +96,13 @@ def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
     distance value. 
 
     There is no need to divide by the L2 norm of the vectors since each embedding has 
-    already been normalized to have an L2 norm 1.
+    already been normalized to have norm = 1.
 
-    Parameters:
-    - matrix (np.ndarray): The matrix of embeddings to calculate distances between.
+    Args:
+    matrix (np.ndarray): The matrix of embeddings to calculate distances between.
 
     Returns:
-    - np.ndarray: A matrix of distance values between every company in the matrix.
+    np.ndarray: A matrix of distance values between every company in the matrix.
     """
     dist = 1 - np.clip(matrix @ matrix.T, -1, 1)
     np.fill_diagonal(dist, 0.0)
@@ -114,12 +114,11 @@ def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
     between them. It embeds a description of each company's operations and calculates a 
     distance measure using the cosine similarity between each stock.
 
-    Parameters:
-    - tickers (list[str]): A list of tickers to get the distances between
-    between.
+    Args:
+    tickers (list[str]): A list of tickers to get the distances between between.
 
     Returns:
-    - pd.DataFrame: A DataFrame that represents a matrix of distances, indexed by ticker symbols.
+    pd.DataFrame: A DataFrame that represents a matrix of distances, indexed by ticker symbols.
     """
 
     # Create array containing embeddings for each company

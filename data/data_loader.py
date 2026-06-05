@@ -9,11 +9,11 @@ def get_tickers(FILEPATH: str) -> list[str]:
     """
     Extract tickers from a csv file of tickers.
 
-    Parameters
-    - FILENAME (str): The path to the file with tickers to extract.
+    Args:
+    FILENAME (str): The path to the file with tickers to extract.
 
-    Returns 
-    - list[str]: A list of tickers.
+    Returns: 
+    list[str]: A list of tickers.
     """
     # Assume csv file has a column named 'Ticker' with the list of ticker symbols
     return pd.read_excel(FILEPATH)['Ticker'].tolist()
@@ -26,14 +26,14 @@ def load_prices(ticker: str,
     """
     Load historical stock price data for a given ticker symbol.
 
-    Parameters:
-    - ticker (str): The stock ticker symbol (e.g., 'NVDA').
-    - start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
-    - end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
-    - interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
+    Args:
+    ticker (str): The stock ticker symbol (e.g., 'NVDA').
+    start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
+    end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
+    interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
 
     Returns:
-    - DataFrame: A DataFrame containing the historical stock price data.
+    pd.DataFrame: A DataFrame containing the historical stock price data.
     """
     try:
         stock = yf.Ticker(ticker)
@@ -58,14 +58,14 @@ def load_stock_data(ticker: str,
     """
     Load historical stock price data for a given ticker symbol.
 
-    Parameters:
-    - ticker (str): The stock ticker symbol (e.g., 'NVDA').
-    - start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
-    - end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
-    - interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
+    Args:
+    ticker (str): The stock ticker symbol (e.g., 'NVDA').
+    start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
+    end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
+    interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
 
     Returns:
-    - DataFrame: A DataFrame containing the historical stock price data.
+    pd.DataFrame: A DataFrame containing the historical stock price data.
     """
     try:
         stock_data = load_prices(ticker, start_date, end_date, interval)
@@ -83,12 +83,12 @@ def calculate_20_day_ma(stock_data: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate the 20-day moving average for the given stock data.
 
-    Parameters:
-    - stock_data (DataFrame): The historical stock price data.
+    Args:
+    stock_data (DataFrame): The historical stock price data.
 
     Returns:
-    - DataFrame: A DataFrame containing the original stock data with an 
-    additional column for the 20-day moving average.
+    DataFrame: A DataFrame containing the original stock data with an 
+      additional column for the 20-day moving average.
     """
     stock_data['20_day_MA'] = stock_data['Close'].rolling(window=20).mean()
     return stock_data
@@ -99,11 +99,11 @@ def calculate_momentum(stock_data: pd.DataFrame) -> pd.DataFrame:
     Use the previous day's closing price and the previous day's 20-day moving 
     average to calculate momentum so that the factor model isn't using future information.
 
-    Parameters:
-    - stock_data (DataFrame): The historical stock price data with the 20-day moving average.
+    Args:
+    stock_data (DataFrame): The historical stock price data with the 20-day moving average.
 
     Returns:
-    - DataFrame: A DataFrame containing the original stock data with an additional column for momentum.
+    DataFrame: A DataFrame containing the original stock data with an additional column for momentum.
     """
     close_prev = stock_data['Close'].shift(1)
     ma_prev = stock_data['20_day_MA'].shift(1)
@@ -115,11 +115,11 @@ def calculate_stock_returns(stock_data: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate the daily percentage change (returns) of the stock.
 
-    Parameters:
-    - stock_data (DataFrame): The historical stock price data.
+    Args:
+    stock_data (DataFrame): The historical stock price data.
 
     Returns:
-    - DataFrame: A DataFrame containing the original stock data with an additional column for daily returns.
+    DataFrame: A DataFrame containing the original stock data with an additional column for daily returns.
     """
     stock_data['Returns'] = stock_data['Close'].pct_change()
     return stock_data
@@ -131,13 +131,12 @@ def load_sp500_data(start_date: str = '2000-01-01',
     """
     Load historical S&P 500 index data and calculate its daily yield.
 
-    Parameters:
-    - start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
-    - end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
-    - interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
-
-    Returns:
-    - DataFrame: A DataFrame containing the historical S&P 500 index data.
+    Args:
+    start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
+    end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
+    interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
+   Returns:
+    pd.DataFrame: A DataFrame containing the historical S&P 500 index data.
     """
     try:
         sp = load_prices('^GSPC', start_date, end_date, interval)
@@ -151,12 +150,12 @@ def get_sp500_yield(sp_data: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate the daily percentage change (yield) of the S&P 500 index.
 
-    Parameters:
-    - sp_data (DataFrame): The historical S&P 500 index data.
+    Args:
+    sp_data (DataFrame): The historical S&P 500 index data.
 
     Returns:
-    - DataFrame: A DataFrame containing the S&P 500 index data 
-    with the daily percentage change (yield).
+    pd.DataFrame: A DataFrame containing the S&P 500 index data 
+      with the daily percentage change (yield).
     """
     sp_data['Market Return'] = sp_data['Close'].pct_change()
     return sp_data
@@ -187,11 +186,11 @@ def calculate_treasury_diff(treasury_10: pd.DataFrame) -> pd.DataFrame:
     Process the 10-year Treasury yield data by calculating the daily difference 
     and match the indices with the S&P 500 index data.
 
-    Parameters:
-    - treasury_10 (DataFrame): The historical 10-year Treasury yield data.
+    Args:
+    treasury_10 (DataFrame): The historical 10-year Treasury yield data.
 
     Returns:
-    - DataFrame: A DataFrame containing the processed 10-year Treasury yield data.
+    DataFrame: A DataFrame containing the processed 10-year Treasury yield data.
     """
     treasury_10['Rate Change'] = treasury_10['10Y_Treasury_Yield'].diff()
     return treasury_10
@@ -203,12 +202,11 @@ def match_indices(treasury: pd.DataFrame,
     """
     Match the indices of treasury and S&P data with the indices of stock data.
 
-    Parameters:
-    - treasury (DataFrame): The historical 10-year Treasury yield data.
+    Args:
+    treasury (DataFrame): The historical 10-year Treasury yield data.
     - sp (DataFrame): The historical S&P 500 index data.
     - stock (DataFrame): The historical stock price data.
-
-    Returns:
+   Returns:
     - Tuple[DataFrame, DataFrame]: A tuple containing the matched treasury and S&P data.
     """
     treasury = treasury[treasury.index.isin(stock.index)]
@@ -224,11 +222,11 @@ def load_factor_data(tickers: list[str],
     Load and merge historical stock price data, S&P 500 index data, and 10-year 
     Treasury yield data for a list of ticker symbols.
 
-    Parameters:
-    - tickers (list[str]): A list of stock ticker symbols to load data for 
+    Args:
+    tickers (list[str]): A list of stock ticker symbols to load data for 
     (e.g., ['NVDA', 'AAPL']).
 
-    Returns:
+    turns:
     - DataFrame: The merged DataFrame for the stocks, S&P 500 index, and 10-year Treasury yield.
     """
     try:
