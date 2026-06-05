@@ -31,7 +31,12 @@ def normalize(array: np.ndarray) -> np.ndarray:
     Returns:
     - np.ndarray: L2-normalized vector.
     """
-    return array/np.linalg.norm(array)
+    # If it's a 1D vector, axis=0. If it's a 2D matrix, axis=1.
+    axis = 1 if array.ndim > 1 else 0
+
+    keepdims=True if array.ndim > 1 else False
+    
+    return array / np.linalg.norm(array, axis=axis, keepdims=keepdims)
 
 def embed_text(text: str, 
                model_name: str='all-MiniLM-L6-v2'
