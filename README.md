@@ -29,9 +29,14 @@ I had originally hoped to use 10-K business descriptions to produce more robust 
 I experimented with various different HuggingFace models for embedding text. I originally used a general and lightweight model `sentence-transformers/all-MiniLM-L6-v2`. Despite its speed and efficiency of performance, the model seemed to be unable to capture more nuanced relationships when examining various distance scores. I then tried a more specialized model `FinLang/finance-embeddings-investopedia` in hopes that its specialized finance corpus would provide better distinction. However, in evaluating the results, it seemed overspecialize in finance and didn't differentiate between sectors as well. Finally, I settled on `sentence-transformers/all-mpnet-base-v2`. This model takes longer to run and requires more computing power, but it seemed best equipped to capture nuance between companies while still upholding fundamental relationships.
 
 #### Differences in Factors
+Aside from capturing structural differences, I also wanted to capture differences in price behavior as another dimension of similarity. To do this, I explored the idea of specifying a parsimonious multi-factor model inspired by empirical asset pricing models[^4]. The specification made use of market exposure, interest rate sensitivity, and momentum in the spirit of the market, style, and macro factors that are employed by institutional risk models like Barra, designed to capture major differences in macro sensitivity and trend-following behavior. Due to the volume of data that I have access to, I chose to run a rolling model, where factors were recomputed every 252 trading days since exposure to these factors isn't static. 
+
+Behavioral distance is then measured by differences in stocks' exposures to those common risk factors, similarly to multi-factor risk models. When taking the distance, I employed the Mahalanobis distance ($D_{ij} = \sqrt{(\beta_i - \beta_j)^T \Sigma^{-1} (\beta_i - \beta_j)}$) due to the fact that it accounted for scale and correlation between factors. 
 
 [^1]: Tinbergen, J. (1962). Shaping the world economy: Suggestions for an international economic policy. Twentieth Century Fund.
 
-[^2]: Hou, K. (2007). Industry information diffusion and the lead-lag effect in stock returns. The Review of Financial Studies, 20(4), 1113–1138. https://doi.org/10.1093/revfin/hhm003 
+[^2]: Hou, K. (2007). Industry information diffusion and the lead-lag effect in stock returns. The Review of Financial Studies, 20(4), 1113–1138. https://doi.org/10.1093/revfin/hhm003.
 
-[^3]: Gabaix, X. (2011). The granular origins of aggregate fluctuations. Econometrica, 79(3), 733–772. https://doi.org/10.3982/ECTA8769
+[^3]: Gabaix, X. (2011). The granular origins of aggregate fluctuations. Econometrica, 79(3), 733–772. https://doi.org/10.3982/ECTA8769.
+
+[^4]:  Fama, E. F., & French, K. R. (1993). Common risk factors in the returns on stocks and bonds. Journal of Financial Economics, 33(1), 3-56. https://doi.org/10.1016/0304-405X(93)90023-5.
