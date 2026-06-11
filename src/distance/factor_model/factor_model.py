@@ -185,7 +185,10 @@ def compute_distances(betas: pd.DataFrame,
     if 'date' not in betas.columns or 'ticker' not in betas.columns:
         betas = betas.reset_index()
     for date, snapshot in betas.groupby('date'):
-        distances = mahalanobis_distance(snapshot, features)
+        # Transform distances to scale between 0-1 to align with cosine distance
+        # Also helps to compress larger distances that lose economic meaning
+        vec = mahalanobis_distance(snapshot, features)
+        distances = 1 - np.exp(-vec)
         tickers = snapshot['ticker'].values
 
         # Get indices of upper triangle (excluding diagonal)
