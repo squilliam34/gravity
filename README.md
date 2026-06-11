@@ -16,6 +16,8 @@ Both the NASDAQ and S&P indices are market cap weighted indices, supporting the 
 
 Additionally, there is empirical evidence that larger companies serve as leading indicators of returns of smaller firms, especially within the same industry[^2], supporting the notion that larger companies influence smaller companies. Furthermore, aside from effecting smaller companies, there is also empirical evidence that larger companies have a greater effect on the economy as well[^3], as a handful of major corporations are accountable for a disproportionately large share of economic output. Therefore, when these large firms experience major shocks, the effects are too big to be "averaged out" and are propagated throughout the economy, further supporting the idea of large cap stocks exhibiting more "force".
 
+Due to the large differences in scales of companies and their valuations, I chose to transform the market caps with a log transformation to compress the space in which market capitalization exists. Mechanically, if this space wasn't compressed, the gravity measure would be dominated by a few mega-cap companies, and my distance measurements would have little measurable effect.
+
 ### Distance
 Deviating from the gravity model used for trade, I didn't want to use geographic locations to represent physical distance. For one, geographic distance is less and less of a barrier in today's world of multinational corporations and international supply chains. Secondly, distances between where companies are based doesn't tell that much. For example, both Bank of America and Honeywell are headquartered in Charlotte, but they fall within very different industries and as such, shouldn't be grouped together. As a result, I propose the following distance metrics: semantic similarity and differences in factors.
 
@@ -32,6 +34,8 @@ I experimented with various different HuggingFace models for embedding text. I o
 Aside from capturing structural differences, I also wanted to capture differences in price behavior as another dimension of similarity. To do this, I explored the idea of specifying a parsimonious multi-factor model inspired by empirical asset pricing models[^4]. The specification made use of market exposure, interest rate sensitivity, and momentum in the spirit of the market, style, and macro factors that are employed by institutional risk models like Barra, designed to capture major differences in macro sensitivity and trend-following behavior. Due to the volume of data that I have access to, I chose to run a rolling model, where factors were recomputed every 252 trading days since exposure to these factors isn't static. 
 
 Behavioral distance is then measured by differences in stocks' exposures to those common risk factors, similarly to multi-factor risk models. When taking the distance, I employed the Mahalanobis distance due to the fact that it accounted for scale and correlation between factors. 
+
+However, after calculating distances, they were on a different scale from the cosine distances. To avoid having cosine distances be overshadowed, I transformed the factor distances using $1-e^{-x}$, as this helped to compress the distance space and also bounded distances within the range (0, 1).
 
 [^1]: Tinbergen, J. (1962). Shaping the world economy: Suggestions for an international economic policy. Twentieth Century Fund.
 
