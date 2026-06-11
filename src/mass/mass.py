@@ -47,9 +47,8 @@ def create_market_cap_matrix(tickers: list[str]) -> np.ndarray:
     # due to differences in lengths
     series_dict = {}
     for ticker in tickers:
-        # Scales market caps by a factor of 1B to prevent overflow
-        s = calculate_monthly_market_cap(ticker) / 1e9
-        series_dict[ticker] = s
+        # Applies a log transformation to market caps to compress the space
+        series_dict[ticker] = np.log(calculate_monthly_market_cap(ticker))
         market_cap_matrix = pd.DataFrame(series_dict)
     return market_cap_matrix.to_numpy()
 
