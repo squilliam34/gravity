@@ -152,6 +152,25 @@ def match_indices(treasury: pd.DataFrame,
     sp = sp[sp.index.isin(stock.index)]
     return treasury, sp
 
+def get_momentum_factor(prices: pd.DataFrame) -> pd.Series:
+    """
+    Calculates a momentum factor using the 12-1 month momentum approach. This entails
+    calculating returns over the last 12 months (~252 trading days) and excluding the most 
+    recent month of trading (~21 trading days). After the last 12-1 month returns are calculated
+    for a given stock, the returns for all stocks available at a given point in time are
+    ranked, and the average return of the last decile is subtracted from the average return
+    of the first decile
+    """
+    momentum_returns = prices.pct_change(252-21).shift(21).dropna(how='all')
+    def decile_spread(row):
+        row = row.dropna()
+        top = row[row >= row.quantile(0.9)].mean()
+        bottom = row[row <= row.quantile(0.1)].mean()
+        return top - bottom
+
+    momentum_returns['Spread'] = momentum_returns.apply(decile_spread, axis=1)
+    return momentum_returns['Spread']
+
 def load_factor_data(tickers: list[str], 
                      start_date: str = '2000-01-01', 
                      end_date: str = date.today().strftime('%Y-%m-%d'), 
