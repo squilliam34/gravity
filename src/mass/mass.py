@@ -52,24 +52,6 @@ def create_market_cap_matrix(tickers: list[str]) -> np.ndarray:
         market_cap_matrix = pd.DataFrame(series_dict)
     return market_cap_matrix.to_numpy()
 
-def create_date_range(start_date: str = '2000-01-01', 
-                      end_date: str = date.today().strftime('%Y-%m-%d')
-                      ) -> pd.DatetimeIndex:
-    """
-    Helper function to create an accurate range of dates.
-
-    Args:
-    start_date (str): The start date for the range.
-    end_date (str): The end date for the range.
-
-    Returns:
-    pd.DatetimeIndex: An index of date ranges.
-    """
-    # Need to offset months by 1 to ensure lengths match
-    today_pd = pd.to_datetime(end_date)
-    next_month = (today_pd + pd.DateOffset(months=1)).strftime('%Y-%m-%d')
-    return pd.date_range(start=start_date, end=next_month, freq='ME')
-
 def calculate_market_cap_products(tickers: list[str], 
                                   start_date: str = '2000-01-01', 
                                   end_date: str = date.today().strftime('%Y-%m-%d')
