@@ -231,6 +231,8 @@ def load_factor_data(tickers: list[str],
         final.index = pd.to_datetime(final.index)
         final.index.strftime('%Y-%m-%d')
         final = final.sort_index().dropna(subset=['Momentum'])
+        # For some reason, the first entry with the interest rate change is NaN so drop first row
+        final.drop(final.index[0], inplace=True)
         return final
     except Exception as e:
         print(f"[load_merged_data] failed: {e}")
