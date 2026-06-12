@@ -41,16 +41,17 @@ def create_market_cap_matrix(tickers: list[str]) -> np.ndarray:
     tickers (list[str]): A list of stock tickers to populate the matrix with.
 
     Returns:
-    np.ndarray: A 2D matrix containing market caps for N stocks across T periods of time.
+    pd.DataFrame: A DataFrame containing market caps for N stocks across T periods
+      of time
     """
     # Need to put daily market caps in df first 
     # due to differences in lengths
     series_dict = {}
     for ticker in tickers:
-        # Applies a log transformation to market caps to compress the space
-        series_dict[ticker] = np.log(calculate_daily_market_cap(ticker))
-        market_cap_matrix = pd.DataFrame(series_dict)
-    return market_cap_matrix.to_numpy()
+        # Log market caps so that it doesn't dominate distance
+        s = np.log(calculate_daily_market_cap(ticker))
+        series_dict[ticker] = s
+    return pd.DataFrame(series_dict)
 
 def calculate_market_cap_products(tickers: list[str], 
                                   start_date: str = '2000-01-01', 
