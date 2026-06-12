@@ -3,6 +3,7 @@ import torch
 from transformers import AutoTokenizer, AutoModel
 import numpy as np
 import pandas as pd
+import re
 
 def get_yf_summary(ticker: str) -> str:
     """
