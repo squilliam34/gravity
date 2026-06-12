@@ -40,36 +40,17 @@ def calculate_rolling_betas(data: pd.DataFrame,
     Returns:
     pd.DataFrame: A DataFrame containing the rolling betas for each stock and factor over time.
     """
-    # Sort index
-    data.sort_index()
     # Create a new column that assigns an end of the month date
     # for easier tracking 
     data['month_end'] = data.index.to_period('M').to_timestamp('M')
-
     month_ends = pd.Index(data['month_end'].drop_duplicates())
 
-    # Get which columns are ticker dependent
-    ticker_cols = [col for col in data.columns if isinstance(col, tuple)]
-    ticker_data = data[ticker_cols]
-
-    # Some rows are completely NaN stock data that have duplicate indices
-    # so drop these
-    data = data[~ticker_data.isna().all(axis=1)]
-
-    # Convert to MultiIndex if column is ticker dependent
-    ticker_data.columns = pd.MultiIndex.from_tuples(ticker_data.columns)
-
-    # Slice data so that tickers are now column names
-    returns_df = ticker_data.xs('Returns', level=1, axis=1)
-    momentum_df = ticker_data.xs('Momentum', level=1, axis=1)
+    results = []
 
     market = data['Market Return'].values
+    momentum = data['Momentum'].values
     rate = data['Rate Change'].values
-    returns = returns_df.values        # (T, N)
-    momentum = momentum_df.values      # (T, N)
-    tickers = returns_df.columns.tolist()
-
-    results = []
+    returns = data[tickers].values
 
     # Declare indexer
     t = 0
@@ -81,19 +62,21 @@ def calculate_rolling_betas(data: pd.DataFrame,
         # Ensure that t > window:
         if t > window:
 
-            Y = returns[t-window:t, :]
-            MOM = momentum[t-window:t, :]
+            Y = returns[t-window:t]
+            MOM = momentum[t-window:t]
             MKT = market[t-window:t]
             RATE = rate[t-window:t]
 
             for i, ticker in enumerate(tickers):
 
                 y_i = Y[:, i]
-                mom_i = MOM[:, i]
 
+                # Mask to check for number of NaN's
+                # Some stocks have more in certain windows due 
+                # To differing IPO dates
                 mask = (
                     ~np.isnan(y_i) &
-                    ~np.isnan(mom_i) &
+                    ~np.isnan(MOM) &
                     ~np.isnan(MKT) &
                     ~np.isnan(RATE)
                 )
@@ -105,7 +88,7 @@ def calculate_rolling_betas(data: pd.DataFrame,
                     np.ones(np.sum(mask)),
                     MKT[mask],
                     RATE[mask],
-                    mom_i[mask]
+                    MOM[mask]
                 ])
 
                 y_clean = y_i[mask]
