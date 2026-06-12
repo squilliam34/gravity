@@ -40,6 +40,8 @@ def calculate_rolling_betas(data: pd.DataFrame,
     Returns:
     pd.DataFrame: A DataFrame containing the rolling betas for each stock and factor over time.
     """
+    print('Running factor model...')
+
     # Create a new column that assigns an end of the month date
     # for easier tracking 
     data['month_end'] = data.index.to_period('M').to_timestamp('M')
@@ -162,6 +164,8 @@ def compute_distances(betas: pd.DataFrame,
     Returns:
     pd.DataFrame: A DataFrame containing the distances between each stock for each window.
     """
+
+    print('Calculating distances between betas...')
     results = []
     
     # Ensure 'date' and 'ticker' exist in columns
