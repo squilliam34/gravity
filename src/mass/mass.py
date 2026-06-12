@@ -45,7 +45,7 @@ def create_market_cap_matrix(tickers: list[str]) -> np.ndarray:
       of time
     """
     # Need to put daily market caps in df first 
-    # due to differences in lengths
+    # due to differences in lengthss
     series_dict = {}
     for ticker in tickers:
         # Log market caps so that it doesn't dominate distance
@@ -70,10 +70,10 @@ def calculate_market_cap_products(tickers: list[str],
     pd.DataFrame: A DataFrame that contains every mass product across every window 
       of time in the range of dates.
     """
-    # Create range of dates
-    dates = create_date_range(start_date=start_date, end_date=end_date)
+    market_cap_df = create_market_cap_matrix(tickers)
+    dates = market_cap_df.index
+    market_cap_matrix = market_cap_df.to_numpy()
     
-    market_cap_matrix = create_market_cap_matrix(tickers)
     # Now calculate outerproducts between MASS_i and MASS_j
     mass_matrix = np.einsum('ti,tj->tij', market_cap_matrix, market_cap_matrix)
 
