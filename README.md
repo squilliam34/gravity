@@ -21,6 +21,8 @@ Due to the large differences in scales of companies and their valuations, I chos
 ### Distance
 Deviating from the gravity model used for trade, I didn't want to use geographic locations to represent physical distance. For one, geographic distance is less and less of a barrier in today's world of multinational corporations and international supply chains. Secondly, distances between where companies are based doesn't tell that much. For example, both Bank of America and Honeywell are headquartered in Charlotte, but they fall within very different industries and as such, shouldn't be grouped together. As a result, I propose the following distance metrics: semantic similarity and differences in factors.
 
+In order to combine them, I used a time-varying weighted average between the 2: $\lambda * D_{factor} + (1 - \lambda) * D_{Similarity}$
+
 #### Semantic Similarity
 Measuring distance by semantic similarity uses an NLP (Natural Language Processing) approach. For each stock in our universe, retrieve a description of the company and embed it into a vector of numerical values. Then, the distance between companies $i$ and $j$ can be found by calculating the cosine similarity, which takes the cosine of the angle between the 2 vectors, and subtracting it from 1. The idea is that the cosine of the angle between two vectors that are closer together/more similar will be closer to 1 so subtracting it from 1 will produce a smaller "distance". Similarly, the cosine of the angle between two vectors that are farther apart/less similar will be closer to 0 so subtracting it from 1 will produce a larger "distance".
 
@@ -38,6 +40,11 @@ Due to the volume of data that I have access to, I chose to run a rolling model,
 Behavioral distance is then measured by differences in stocks' exposures to those common risk factors, similarly to multi-factor risk models. When taking the distance, I employed the Mahalanobis distance due to the fact that it accounted for scale and correlation between factors. 
 
 However, after calculating distances, they were on a different scale from the cosine distances. To avoid having cosine distances be overshadowed, I transformed the factor distances using $1-e^{-x}$, as this helped to compress the distance space and also bounded distances within the range (0, 1).
+
+#### Lambda
+For Lambda, I wanted a measure that would vary over time and dynamically weight each distance factor depending on market conditions. This offered a more robust weighting system than arbitrarily weighting each factor. To do so, I chose to calculate $\lambda$ using the $VIX$, as my rationale was that during more volatile periods, the price behavior -- and therefore factor difference -- would be more important than structural differences between companies. However, the $VIX$ as itself does not neatly work as a weight since it scales from 0 to technically infinity. Additionally, if we treat the long term average of the $VIX$ as a baseline market regime where each distance factor should be weighted more or less evenly, the long term average of ~19 - ~21 doesn't offer convenient weighting.
+
+To address these issues, I passed the $VIX$ value through a sigmoid function of the form $\frac{1}{1 + e^{-k * \frac{VIX}{\text{threshold}}}}$. Here, $k$ works as a measure of how steep the sigmoid function is and how reactive $\lambda$ is to a change in the $VIX$. $\text{threshold}$ serves to scale the $VIX$ down, based on how far away from the long term average the current measure is.
 
 [^1]: Tinbergen, J. (1962). Shaping the world economy: Suggestions for an international economic policy. Twentieth Century Fund.
 
