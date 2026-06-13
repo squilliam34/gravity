@@ -71,9 +71,9 @@ def calculate_market_cap_products(tickers: list[str],
       of time in the range of dates.
     """
     market_cap_df = create_market_cap_matrix(tickers)
-    dates = market_cap_df.index
+    dates = market_cap_df.index.strftime('%Y-%m-%d')
     market_cap_matrix = market_cap_df.to_numpy()
-    
+
     # Now calculate outerproducts between MASS_i and MASS_j
     mass_matrix = np.einsum('ti,tj->tij', market_cap_matrix, market_cap_matrix)
 
@@ -86,9 +86,13 @@ def calculate_market_cap_products(tickers: list[str],
     num_pairs = len(triu_i)  
     num_dates = len(dates)   
 
-    return pd.DataFrame({
+    results = pd.DataFrame({
             'date': np.repeat(dates, num_pairs),
             'stock_i': np.tile(tickers_array[triu_i], num_dates),
             'stock_j': np.tile(tickers_array[triu_j], num_dates),
             'mass_i * mass_j': mass_matrix[:, triu_i, triu_j].reshape(-1)
     })
+    
+    return results.set_index(
+      ['date', 'stock_i', 'stock_j']
+      ).sort_index()

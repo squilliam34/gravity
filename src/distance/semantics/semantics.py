@@ -133,5 +133,13 @@ def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
     # Calculate distances between each company using cosine similarity (1-cos(theta))
     matrix = calculate_cosine_similarity_distance(embeddings)
 
-    # Return DataFrame of distances indexed by ticker
-    return pd.DataFrame(matrix, index=tickers, columns=tickers)
+    df = pd.DataFrame(matrix, index=tickers, columns=tickers)
+    # Convert to long form
+    long_df = (
+        df
+        .stack()
+        .to_frame('semantic_distance')
+    )
+
+    long_df.index.names = ['stock_i', 'stock_j']
+    return long_df

@@ -41,11 +41,9 @@ def calculate_rolling_betas(data: pd.DataFrame,
     pd.DataFrame: A DataFrame containing the rolling betas for each stock and factor over time.
     """
     print('Running factor model...')
-
-    # Create a new column that assigns an end of the month date
-    # for easier tracking 
-    data['month_end'] = data.index.to_period('M').to_timestamp('M')
-    month_ends = pd.Index(data['month_end'].drop_duplicates())
+    # Create a new column that assigns a month for easier tracking 
+    data['month'] = data.index.to_period('M')
+    month_ends = pd.Index(data['month'].drop_duplicates())
 
     results = []
 
@@ -59,7 +57,7 @@ def calculate_rolling_betas(data: pd.DataFrame,
     for date in month_ends:
 
         # Get number of trading days to increment t by
-        increment = len(data.groupby('month_end').indices[date])
+        increment = len(data.groupby('month').indices[date])
 
         # Ensure that t > window:
         if t > window:
@@ -73,9 +71,6 @@ def calculate_rolling_betas(data: pd.DataFrame,
 
                 y_i = Y[:, i]
 
-                # Mask to check for number of NaN's
-                # Some stocks have more in certain windows due 
-                # To differing IPO dates
                 mask = (
                     ~np.isnan(y_i) &
                     ~np.isnan(MOM) &
@@ -187,4 +182,9 @@ def compute_distances(betas: pd.DataFrame,
             'distance': distances[triu_idx]
         }))
 
-    return pd.concat(results, ignore_index=True)
+    results = pd.concat(results, ignore_index=True)
+
+    # Convert to multindex 
+    return results.set_index(
+        ['date', 'stock_i', 'stock_j']
+        ).sort_index()
