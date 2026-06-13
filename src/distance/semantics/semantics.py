@@ -134,12 +134,17 @@ def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
     matrix = calculate_cosine_similarity_distance(embeddings)
 
     df = pd.DataFrame(matrix, index=tickers, columns=tickers)
-    # Convert to long form
+
+    # Mask upper triangle (exclude diagonal + duplicates)
+    mask = np.triu(np.ones(df.shape), k=1).astype(bool)
+
+    # Convert to MultiIndex
     long_df = (
-        df
-        .stack()
-        .to_frame('semantic_distance')
+        df.where(mask)
+          .stack()
+          .to_frame('distance')
     )
 
     long_df.index.names = ['stock_i', 'stock_j']
+
     return long_df
