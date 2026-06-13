@@ -142,7 +142,7 @@ def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
     long_df = (
         df.where(mask)
           .stack()
-          .to_frame('distance')
+          .to_frame('semantic distance')
     )
 
     long_df.index.names = ['stock_i', 'stock_j']

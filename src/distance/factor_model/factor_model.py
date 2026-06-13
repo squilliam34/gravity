@@ -176,15 +176,15 @@ def compute_distances(betas: pd.DataFrame,
         # Get indices of upper triangle (excluding diagonal)
         triu_idx = np.triu_indices(len(tickers), k=1)
         results.append(pd.DataFrame({
-            'date': date,
+            'month': date,
             'stock_i': tickers[triu_idx[0]],
             'stock_j': tickers[triu_idx[1]],
-            'distance': distances[triu_idx]
+            'factor distance': distances[triu_idx]
         }))
 
     results = pd.concat(results, ignore_index=True)
 
     # Convert to multindex 
     return results.set_index(
-        ['date', 'stock_i', 'stock_j']
+        ['month', 'stock_i', 'stock_j']
         ).sort_index()
