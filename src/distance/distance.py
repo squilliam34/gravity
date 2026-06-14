@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
 from data.data_loader import load_prices, load_factor_data
-from factor_model.factor_model import compute_distances, calculate_rolling_betas
-from semantics.semantics import get_semantic_distances
+from src.distance.factor_model.factor_model import compute_distances, calculate_rolling_betas
+from src.distance.semantics.semantics import get_semantic_distances
+from datetime import date
 
 def sigmoid(vix: np.ndarray, k: int = 0.05, threshold: int=20) -> np.ndarray:
     """
