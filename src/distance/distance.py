@@ -108,5 +108,6 @@ def build_distances(tickers: list[str]) -> pd.DataFrame:
     df['Distance'] = lambda_val*factors + (1 - lambda_val)*semantics
 
     df = df[['date', 'stock_i','stock_j', 'Distance']]
-    df.set_index(['date', 'stock_i', 'stock_j'], inplace=True).sort_index()
+    df.set_index(['date', 'stock_i', 'stock_j'], inplace=True)
+    df.sort_index(inplace=True)
     return df
