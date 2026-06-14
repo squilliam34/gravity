@@ -47,13 +47,22 @@ def get_lambda(start_date: str = '2000-01-01',
     
     return sig_df
 
-def build_distances(tickers: list[str]) -> pd.DataFrame:
+def build_distances(tickers: list[str], 
+                    start_date: str = '2000-01-01', 
+                    end_date: str = date.today().strftime('%Y-%m-%d'), 
+                    interval: str = '1d',
+                    window: int = 252) -> pd.DataFrame:
     """
     Calculate the final distance measure. Apply time-varying weights using the VIX
     to cosine distances (more structural measure) and factor distances (more behavioral).
 
     Args:
     tickers (list[str]): A list of tickers to get the distances between between.
+    start_date (str): The start date for the data in 'YYYY-MM-DD' format.
+    end_date (str): The end date for the data in 'YYYY-MM-DD' format.
+    interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
+    window (int): The size of the rolling window to use for the factor model
+      (default is 252 trading days, approximately one year).
 
     Returns:
     pd.DataFrame: A DataFrame containing the final distances for any stock combination across time
@@ -61,8 +70,8 @@ def build_distances(tickers: list[str]) -> pd.DataFrame:
     print('Loading factor data...')
 
     # Calculate distance of factors
-    factor_data = load_factor_data(tickers)
-    betas = calculate_rolling_betas(data=factor_data, tickers=tickers)
+    factor_data = load_factor_data(tickers, start_date=start_date, end_date=end_date, interval=interval)
+    betas = calculate_rolling_betas(data=factor_data, tickers=tickers, window=window)
     beta_distance = compute_distances(betas=betas)
 
     # Create daily range of dates from the factor data since it has the latest start
@@ -72,7 +81,7 @@ def build_distances(tickers: list[str]) -> pd.DataFrame:
     daily_index = pd.date_range(start=start_date, end=today, freq='D')
 
     # Get lambda values and index to match factor time frame
-    lam = get_lambda()
+    lam = get_lambda(start_date=start_date, end_date=end_date, interval=interval)
     lam = lam.loc[daily_index[0]: ]
 
     # Retrieve cosine differences
