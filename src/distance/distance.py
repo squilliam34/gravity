@@ -57,7 +57,7 @@ def build_distances(tickers: list[str],
     to cosine distances (more structural measure) and factor distances (more behavioral).
 
     Args:
-    tickers (list[str]): A list of tickers to get the distances between between.
+    tickers (list[str]): A list of tickers to get the distances between.
     start_date (str): The start date for the data in 'YYYY-MM-DD' format.
     end_date (str): The end date for the data in 'YYYY-MM-DD' format.
     interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
