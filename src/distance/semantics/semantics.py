@@ -15,6 +15,7 @@ def get_yf_summary(ticker: str) -> str:
     Returns:
     str: A summary of the company.
     """
+    print(f'Retrieving description for {ticker}')
     company = yf.Ticker(ticker)
     return company.info['longBusinessSummary']
 
