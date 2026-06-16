@@ -208,3 +208,6 @@ __marimo__/
 
 # ignore my test notebook
 notebooks/
+
+# ignore large csv "cache" files
+S&P500
