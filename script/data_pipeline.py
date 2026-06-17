@@ -7,8 +7,12 @@ from pathlib import Path
 from data.data_loader import get_tickers
 from src.distance.semantics.semantics import get_semantic_distances
 from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
-from src.mass.mass import calculate_market_cap_products
+from src.mass.mass import create_market_cap_df
+import warnings
 print('Finished imports')
+
+# Suppress all FutureWarnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 ########################################
 # PART 1: Import tickers
@@ -100,7 +104,7 @@ for start_date, end_date in intervals:
         print(f'Market caps for {start_date} → {end_date} already exists')
     else:
         print('Calculating market caps...')
-        market_caps = calculate_market_cap_products(
+        market_caps = create_market_cap_df(
             tickers=tickers,
             start_date=start_date,
             end_date=end_date
