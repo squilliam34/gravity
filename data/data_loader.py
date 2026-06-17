@@ -175,8 +175,9 @@ def get_momentum_factor(prices: pd.DataFrame) -> pd.Series:
         bottom = row[row <= row.quantile(0.1)].mean()
         return top - bottom
 
-    momentum_returns['Spread'] = momentum_returns.apply(decile_spread, axis=1)
-    return momentum_returns['Spread']
+    spread = momentum_returns.apply(decile_spread, axis=1)
+    spread.name = 'Spread'
+    return spread
 
 def load_factor_data(tickers: list[str], 
                      start_date: str = '2000-01-01', 
@@ -218,16 +219,21 @@ def load_factor_data(tickers: list[str],
         # Need to calculate momentum factor using only the closing prices
         subset = prices['Close']
         momentum = get_momentum_factor(subset)
-        prices['Momentum'] = momentum
+        momentum.name = 'Momentum'  
 
-        prices.drop(columns=['Close'], inplace=True)
+        # Drop 'Close' first to clean up memory
+        prices = prices.drop(columns=['Close'])
 
         treasury, market = match_indices(treasury, market, prices)
 
-        final = pd.concat([prices, 
-                            market.get('Market Return', pd.Series()), 
-                            treasury.get('Rate Change', pd.Series())], 
-                            axis=1)
+        # Concatenate factors
+        final = pd.concat([
+            prices, 
+            momentum,
+            market.get('Market Return', pd.Series()), 
+            treasury.get('Rate Change', pd.Series())
+        ], axis=1)
+        
         final.index = pd.to_datetime(final.index)
         final.index.strftime('%Y-%m-%d')
         final = final.sort_index().dropna(subset=['Momentum'])
