@@ -2,13 +2,13 @@ print('Importing libraries...')
 from datetime import date
 import pandas as pd
 from pathlib import Path
+import warnings
 
 # Personal modules
 from data.data_loader import get_tickers
 from src.distance.semantics.semantics import get_semantic_distances
 from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
 from src.mass.mass import create_market_cap_df
-import warnings
 print('Finished imports')
 
 # Suppress all FutureWarnings
