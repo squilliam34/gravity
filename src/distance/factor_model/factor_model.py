@@ -41,9 +41,9 @@ def calculate_rolling_betas(data: pd.DataFrame,
     pd.DataFrame: A DataFrame containing the rolling betas for each stock and factor over time.
     """
     print('Running factor model...')
-    # Create a new column that assigns a month for easier tracking 
-    data['month'] = data.index.to_period('M')
-    month_ends = pd.Index(data['month'].drop_duplicates())
+    # Create the month period directly from the index without adding it as a column
+    months_series = data.index.to_period('M')
+    month_ends = months_series.drop_duplicates()
 
     results = []
 
@@ -52,12 +52,17 @@ def calculate_rolling_betas(data: pd.DataFrame,
     rate = data['Rate Change'].values
     returns = data[tickers].values
 
+    # Build a lookup dictionary for indices 
+    month_indices = {}
+    for idx, m in enumerate(months_series):
+        month_indices.setdefault(m, []).append(idx)
+
     # Declare indexer
     t = 0
     for date in month_ends:
 
-        # Get number of trading days to increment t by
-        increment = len(data.groupby('month').indices[date])
+        # Get number of trading days using our fast lookup
+        increment = len(month_indices[date])
 
         # Ensure that t > window:
         if t > window:
