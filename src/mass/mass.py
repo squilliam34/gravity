@@ -34,69 +34,30 @@ def calculate_daily_market_cap(ticker: str,
     market_caps = market_caps.rename(ticker)
     return market_caps
 
-def create_market_cap_matrix(tickers: list[str]) -> np.ndarray:
+def create_market_cap_df(tickers:list[str],
+                         start_date: str = '2000-01-01',
+                         end_date: str = date.today().strftime('%Y-%m-%d')
+                        ) -> pd.DataFrame:
     """
-    Creates a TxN matrix of daily market caps, where T is the number
-    of time periods, and N is the number of stocks in the universe.
-    Market caps are scaled by a factor of 1e9 to avoid future calculation
-    overflow.
-
     Args:
-    tickers (list[str]): A list of stock tickers to populate the matrix with.
-
-    Returns:
-    pd.DataFrame: A DataFrame containing market caps for N stocks across T periods
-      of time
-    """
-    # Need to put daily market caps in df first 
-    # due to differences in lengthss
-    series_dict = {}
-    for ticker in tickers:
-        # Log market caps so that it doesn't dominate distance
-        s = np.log(calculate_daily_market_cap(ticker))
-        series_dict[ticker] = s
-    return pd.DataFrame(series_dict)
-
-def calculate_market_cap_products(tickers: list[str], 
-                                  start_date: str = '2000-01-01', 
-                                  end_date: str = date.today().strftime('%Y-%m-%d')
-                                  ) -> pd.DataFrame:
-    """
-    Calculate market cap products for every 2 given stocks across a given timeframe.
-
-    Args:
-    tickers (list[str]): A list of tickers in the universe whose masses will be multiplied to 
-      populate the matrix.
-    start_date (str): The start date of the range.
-    end_date (str): The end date of the range.
-
-    Returns:
-    pd.DataFrame: A DataFrame that contains every mass product across every window 
-      of time in the range of dates.
-    """
-    market_cap_df = create_market_cap_matrix(tickers)
-    dates = market_cap_df.index.strftime('%Y-%m-%d')
-    market_cap_matrix = market_cap_df.to_numpy()
-
-    # Now calculate outerproducts between MASS_i and MASS_j
-    mass_matrix = np.einsum('ti,tj->tij', market_cap_matrix, market_cap_matrix)
-
-    # Convert back to df for easy access
-    triu_index = np.triu_indices(len(tickers), 1)
-    tickers_array = np.array(tickers)
+    tickers (list[str]): A list of tickers to retrieve market caps for.
+    start_date (str): The start date for the data in 'YYYY-MM-DD' format.
+    end_date (str): The end date for the data in 'YYYY-MM-DD' format.
     
-    triu_i, triu_j = triu_index
+    Returns:
+    pd.DataFrame: A DataFrame containing daily series of a company's market capitalization.
+    """
+    mkt_cps = [calculate_daily_market_cap(ticker) for ticker in tickers]
+    mkt_cps = pd.concat(mkt_cps, axis = 1)
+    mkt_cps = (
+        mkt_cps
+        .stack()
+        .rename('market_cap')
+    )
 
-    num_pairs = len(triu_i)  
-    num_dates = len(dates)   
-
-    results = pd.DataFrame({
-            'date': np.repeat(dates, num_pairs),
-            'stock_i': np.tile(tickers_array[triu_i], num_dates),
-            'stock_j': np.tile(tickers_array[triu_j], num_dates),
-            'mass_i * mass_j': mass_matrix[:, triu_i, triu_j].reshape(-1)
-    })
-    
-    return results.set_index(
-      ['date', 'stock_i', 'stock_j']
-      ).sort_index()
+    # Need to convert date to match format of other objects to be used
+    mkt_cps.index.names = ['date', 'ticker']
+    mkt_cps = mkt_cps.reset_index()
+    mkt_cps['date'] = pd.to_datetime(mkt_cps['date']).dt.tz_localize(None)
+    mkt_cps = mkt_cps.set_index(['date','ticker'])
+    return mkt_cps
