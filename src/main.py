@@ -1,53 +1,74 @@
-from data.data_loader import get_tickers
-from src.mass.mass import calculate_market_cap_products
-from src.distance.distance import build_distances
 import pandas as pd
-from datetime import date
 
-def calculate_gravity(tickers: list[str], 
-                      start_date: str = '2000-01-01', 
-                      end_date: str = date.today().strftime('%Y-%m-%d'), 
-                      interval: str = '1d',
-                      window: int = 252) -> pd.DataFrame:
+def calculate_gravity(start_year: int) -> pd.Series:
     """
-    Calculates a measure of gravity between stocks of the form M1*M2/D.
+    Calculate the gravity metric for a 2 year time period.
 
     Args:
-    tickers (list[str]): A list of tickers to calculate the gravities between.
-    start_date (str): The start date for the data in 'YYYY-MM-DD' format.
-    end_date (str): The end date for the data in 'YYYY-MM-DD' format.
-    interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
-    window (int): The size of the rolling window to use for the factor model
-      (default is 252 trading days, approximately one year).
+    start_year (int): The year at the start of the period.
 
     Returns:
-    pd.DataFrame: A DataFrame containing the mass, distance, and gravity between
-      stock combinations over time.
+    pd.Series: A series of gravity values between stocks in the S&P 500 across time.
     """
-    distance = build_distances(tickers=tickers, 
-                               start_date=start_date, 
-                               end_date=end_date, 
-                               interval=interval,
-                               window=window)
-    mass = calculate_market_cap_products(tickers=tickers,
-                                         start_date=start_date,
-                                         end_date=end_date)
+    # Define end year
+    end_year = start_year+1
 
-    # Need to convert index of mass to datetime
+    # Read in mass data and set index
+    mass = pd.read_csv(f'../data/S&P500/market_caps/market_caps_{start_year}-01-01_2021-12-31.csv')
     mass = mass.reset_index()
-    mass['date'] = pd.to_datetime(mass['date'])
-    mass = mass.set_index(['date', 'stock_i', 'stock_j'])
+    mass['date'] = pd.to_datetime(mass['date']).dt.tz_localize(None)
+    mass = mass.set_index(['date','ticker']).sort_index()
+    
+    # Read distance data and set index
+    distance = pd.read_csv(f'../data/S&P500/distances/distance_{start_year}-01-01_{end_year}-12-31.csv')
+    distance['date'] = pd.to_datetime(distance['date'])
+    distance['date'] = (
+        pd.to_datetime(distance['date'])
+        .dt.tz_localize(None)
+    )
+    distance = distance.set_index(
+        ['date', 'stock_i', 'stock_j']
+    ).sort_index()
 
-    # Subet mass to same index as distances
+    # Subset mass data to have the same date range as distance data
+    # Factor model ends up cutting out about 2 years w/ momentum calculation
+    # And factor model window size
     dates = distance.index.get_level_values('date').unique()
     mass = mass.loc[
         mass.index.get_level_values('date').isin(dates)
     ]
 
-    # Join distance and mass for easy calculation
-    mass = mass.join(distance, on=['date', 'stock_i', 'stock_j'])
+    # Convert mass df to multiindex that matches distance data
+    idx = distance.index
+    distance['mass_i'] = (
+        mass.reindex(
+            pd.MultiIndex.from_arrays(
+                [
+                    idx.get_level_values('date'),
+                    idx.get_level_values('stock_i')
+                ]
+            )
+        )['market_cap']
+        .to_numpy()
+    )
 
-    # Calculate gravity
-    mass['Gravity'] = mass['mass_i * mass_j'] / mass['Distance']
-    
-    return mass
+    distance['mass_j'] = (
+        mass.reindex(
+            pd.MultiIndex.from_arrays(
+                [
+                    idx.get_level_values('date'),
+                    idx.get_level_values('stock_j')
+                ]
+            )
+        )['market_cap']
+        .to_numpy()
+    )
+
+    # Calculate mass product as needed
+    distance['mass_product'] = (
+        distance['mass_i']
+        * distance['mass_j']
+    )
+
+    # Gravity calculation
+    return distance['mass_product'] / distance['Distance']
