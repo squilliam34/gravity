@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from data.data_loader import load_prices
 from datetime import date
 
 def sigmoid(vix: np.ndarray, k: int = 0.05, threshold: int=20) -> np.ndarray:
