@@ -36,20 +36,16 @@ def load_prices(ticker: str,
     Returns:
     pd.DataFrame: A DataFrame containing the historical stock price data.
     """
-    try:
-        stock = yf.Ticker(ticker)
-        stock_data = stock.history(start=start_date, end=end_date, interval=interval)
-        stock_data.index = stock_data.index.date
-        stock_data = stock_data.drop(columns=['Open', 
-                                              'High', 
-                                              'Low', 
-                                              'Volume', 
-                                              'Dividends', 
-                                              'Stock Splits'])
+    stock = yf.Ticker(ticker)
+    stock_data = stock.history(start=start_date, end=end_date, interval=interval)
+
+    # Check if the stock data exists (may not depending on IPO date)
+    if stock_data.empty:
         return stock_data
-    except Exception as e:
-        print(f"[load_prices] failed for {ticker}: {e}")
-        return pd.DataFrame()
+
+    stock_data.index = stock_data.index.tz_localize(None)
+    stock_data = stock_data.drop(columns=['Open', 'High', 'Low', 'Volume', 'Dividends', 'Stock Splits'])
+    return stock_data
 
 def calculate_stock_returns(stock_data: pd.DataFrame) -> pd.DataFrame:
     """
@@ -115,6 +111,7 @@ def load_10_year_treasury_data() -> pd.DataFrame:
 
         fred = Fred(api_key=fred_api_key)
         treasury_10 = fred.get_series('DGS10').to_frame(name='10Y_Treasury_Yield')
+        treasury_10.index = pd.to_datetime(treasury_10.index)
         treasury_10 = calculate_treasury_diff(treasury_10)
         return treasury_10
     except Exception as e:
