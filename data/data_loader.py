@@ -220,20 +220,20 @@ def build_return_panel(tickers, start_date, end_date):
     
     # Include a buffer of 7 days so that the first trading day isn't NaN from pct_change
     start_date = add_years(start_date, years=1, days=7)
-    frames = []
+
+    frames = {}
 
     for t in tickers:
         df = load_prices(t, start_date, end_date)
 
         if df.empty:
+            frames[t] = pd.Series(dtype=float)
             continue
 
-        df = calculate_stock_returns(df)
+        returns = calculate_stock_returns(df)['Returns']
+        frames[t] = returns
 
-        out = df[['Returns']].rename(columns={'Returns': t})
-        frames.append(out)
-
-    return pd.concat(frames, axis=1)
+    return pd.DataFrame(frames)
 
 def build_factor_panel(tickers, start_date, end_date):
     """
@@ -295,4 +295,8 @@ def load_factor_data(tickers: list[str],
     y = build_return_panel(tickers=tickers, start_date=start_date, end_date=end_date)
     X = build_factor_panel(tickers=tickers, start_date=start_date, end_date=end_date)
     data = y.join(X, how='inner')
+    data.index = pd.to_datetime(data.index)
+    data = data.sort_index()
+
+    return data.loc[pd.Timestamp(start_date):]
     return data.loc[start_date:]
