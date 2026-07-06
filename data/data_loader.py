@@ -270,15 +270,14 @@ def build_factor_panel(tickers, start_date, end_date):
     momentum = get_momentum_factor(prices)
 
     return pd.concat([
-        momentum.rename("Momentum"),
-        market["Market Return"],
-        treasury["Rate Change"]
+        momentum.rename('Momentum'),
+        market['Market Return'],
+        treasury['Rate Change']
     ], axis=1)
 
 def load_factor_data(tickers: list[str], 
                      start_date: str = '2000-01-01', 
-                     end_date: str = date.today().strftime('%Y-%m-%d'), 
-                     interval: str = '1d'
+                     end_date: str = date.today().strftime('%Y-%m-%d')
                      ) -> pd.DataFrame:
     """
     Load and merge historical stock price data, S&P 500 index data, and 10-year 
@@ -288,54 +287,11 @@ def load_factor_data(tickers: list[str],
     tickers (list[str]): A list of stock ticker symbols to load data for (e.g., ['NVDA', 'AAPL']).
     start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
     end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
-    interval (str): The data interval (e.g., '1d' for daily, '1wk' for weekly).
 
     turns:
     - DataFrame: The merged DataFrame for the stocks, S&P 500 index, and 10-year Treasury yield.
     """
-    try:
-        treasury = load_10_year_treasury_data()
-        market = load_sp500_data()
-
-        prices = []
-        for ticker in tickers:
-            # Retrieve raw price data
-            stock_data = load_prices(ticker)
-            if stock_data.empty:
-                print(f'[load_merged_data] warning: no data for ticker {ticker}')
-                continue
-            prices.append(stock_data)
-
-            # Calculate returns that will be used as the target variable
-            returns = calculate_stock_returns(stock_data)
-            returns.columns = ['Close', ticker]
-
-        prices = pd.concat(prices, axis=1)
-
-        # Need to calculate momentum factor using only the closing prices
-        subset = prices['Close']
-        momentum = get_momentum_factor(subset)
-        momentum.name = 'Momentum'  
-
-        # Drop 'Close' first to clean up memory
-        prices = prices.drop(columns=['Close'])
-
-        treasury, market = match_indices(treasury, market, prices)
-
-        # Concatenate factors
-        final = pd.concat([
-            prices, 
-            momentum,
-            market.get('Market Return', pd.Series()), 
-            treasury.get('Rate Change', pd.Series())
-        ], axis=1)
-        
-        final.index = pd.to_datetime(final.index)
-        final.index.strftime('%Y-%m-%d')
-        final = final.sort_index().dropna(subset=['Momentum'])
-        # For some reason, the first entry with the interest rate change is NaN so drop first row
-        final.drop(final.index[0], inplace=True)
-        return final
-    except Exception as e:
-        print(f"[load_merged_data] failed: {e}")
-        return pd.DataFrame()
+    y = build_return_panel(tickers=tickers, start_date=start_date, end_date=end_date)
+    X = build_factor_panel(tickers=tickers, start_date=start_date, end_date=end_date)
+    data = y.join(X, how='inner')
+    return data.loc[start_date:]
