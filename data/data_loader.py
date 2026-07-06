@@ -1,5 +1,6 @@
 import yfinance as yf
-from datetime import date
+from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
 import os
 from dotenv import load_dotenv
 from fredapi import Fred
