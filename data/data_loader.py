@@ -182,6 +182,26 @@ def get_momentum_factor(prices: pd.DataFrame) -> pd.Series:
     spread.name = 'Spread'
     return spread
 
+def add_years(date:str, years:int, days:int = None):
+    """
+    Utility function that adds the specified number of years to the date.
+
+    Args:
+    date (str): The date to adjust.
+    years (int): The number of years to add on.
+    days (int | None): The number of days to add.
+
+    Returns:
+    str: The adjusted date string.
+    """
+    date_obj = datetime.strptime(date, DATE_FMT)
+    # Subtract the years needed
+    date_obj = date_obj - relativedelta(years=years)
+    # Convert back to string
+    if days is not None:
+        date_obj = date_obj - relativedelta(days=days)
+    return date_obj.strftime(DATE_FMT)
+
 def load_factor_data(tickers: list[str], 
                      start_date: str = '2000-01-01', 
                      end_date: str = date.today().strftime('%Y-%m-%d'), 
