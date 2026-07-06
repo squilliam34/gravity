@@ -6,6 +6,8 @@ from fredapi import Fred
 import pandas as pd
 import numpy as np
 
+DATE_FMT = '%Y-%m-%d'
+
 def get_tickers(FILEPATH: str) -> list[str]:
     """
     Extract tickers from a csv file of tickers.
@@ -201,6 +203,77 @@ def add_years(date:str, years:int, days:int = None):
     if days is not None:
         date_obj = date_obj - relativedelta(days=days)
     return date_obj.strftime(DATE_FMT)
+
+def build_return_panel(tickers, start_date, end_date):
+    """
+    Build the stock return panel data.
+
+    Args:
+    tickers (list[str]): A list of stock ticker symbols to load data for (e.g., ['NVDA', 'AAPL']).
+    start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
+    end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
+
+    Returns:
+    pd.DataFrame: A DataFrame of stock returns to use as a target variable in the factor model.
+    """
+    
+    # Include a buffer of 7 days so that the first trading day isn't NaN from pct_change
+    start_date = add_years(start_date, years=1, days=7)
+    frames = []
+
+    for t in tickers:
+        df = load_prices(t, start_date, end_date)
+
+        if df.empty:
+            continue
+
+        df = calculate_stock_returns(df)
+
+        out = df[['Returns']].rename(columns={'Returns': t})
+        frames.append(out)
+
+    return pd.concat(frames, axis=1)
+
+def build_factor_panel(tickers, start_date, end_date):
+    """
+    Build the factor panel data.
+
+    Args:
+    tickers (list[str]): A list of stock ticker symbols to load data for (e.g., ['NVDA', 'AAPL']).
+    start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
+    end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
+
+    Returns:
+    pd.DataFrame: A DataFrame of factor data to use as regressors in the factor model.
+    """
+    # The factor model also requires a year of data for the rolling window regression, 
+    # so I need another year of data for stocks, s&p, 10 year
+    # Include a buffer of 7 days so that the first trading day isn't NaN from pct_change
+    start_date_1 = add_years(start_date, years=1, days=7)
+    # The momentum factor requires a year of data prior to its start, 
+    # so I need to include an extra (second) year of data for stock prices
+    start_date_2 = add_years(start_date, years=2)
+    treasury = load_10_year_treasury_data(start_date_1, end_date)
+    market = load_sp500_data(start_date_1, end_date)
+
+    prices = []
+
+    for t in tickers:
+        df = load_prices(t, start_date_2, end_date)
+        if df.empty:
+            continue
+
+        prices.append(df[['Close']].rename(columns={'Close': t}))
+
+    prices = pd.concat(prices, axis=1)
+
+    momentum = get_momentum_factor(prices)
+
+    return pd.concat([
+        momentum.rename("Momentum"),
+        market["Market Return"],
+        treasury["Rate Change"]
+    ], axis=1)
 
 def load_factor_data(tickers: list[str], 
                      start_date: str = '2000-01-01', 
