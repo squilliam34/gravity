@@ -96,21 +96,27 @@ def get_sp500_yield(sp_data: pd.DataFrame) -> pd.DataFrame:
     sp_data['Market Return'] = sp_data['Close'].pct_change()
     return sp_data
 
-def load_10_year_treasury_data() -> pd.DataFrame:
+def load_10_year_treasury_data(start_date: str = '2000-01-01', 
+                               end_date: str = date.today().strftime('%Y-%m-%d')):
     """"
     Load historical 10-year Treasury yield data from FRED and process it.
 
+    Args:
+    start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
+    end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
+
     Returns:
-    pd.DataFrame: A DataFrame containing the historical 10-year Treasury yield data.
+    Series: A Series containing the historical 10-year Treasury yield data.
     """
     try:
         load_dotenv()
         fred_api_key = os.getenv('FRED')
-        if not fred_api_key:
-            raise RuntimeError('FRED API key not found in environment variables.')
-
         fred = Fred(api_key=fred_api_key)
-        treasury_10 = fred.get_series('DGS10').to_frame(name='10Y_Treasury_Yield')
+        treasury_10 = fred.get_series(
+                                    'DGS10', 
+                                    observation_start=start_date,
+                                    observation_end=end_date
+                                    ).to_frame(name='10Y_Treasury_Yield')
         treasury_10.index = pd.to_datetime(treasury_10.index)
         treasury_10 = calculate_treasury_diff(treasury_10)
         return treasury_10
