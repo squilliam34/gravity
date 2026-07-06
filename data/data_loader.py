@@ -289,8 +289,8 @@ def load_factor_data(tickers: list[str],
     start_date (str): The start date for the historical data in 'YYYY-MM-DD' format.
     end_date (str): The end date for the historical data in 'YYYY-MM-DD' format.
 
-    turns:
-    - DataFrame: The merged DataFrame for the stocks, S&P 500 index, and 10-year Treasury yield.
+    Returns:
+    DataFrame: The merged DataFrame for the stocks, S&P 500 index, and 10-year Treasury yield.
     """
     y = build_return_panel(tickers=tickers, start_date=start_date, end_date=end_date)
     X = build_factor_panel(tickers=tickers, start_date=start_date, end_date=end_date)
