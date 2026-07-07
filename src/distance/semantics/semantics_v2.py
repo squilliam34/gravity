@@ -48,9 +48,9 @@ GEMINI = genai.Client(
 ########## CACHE HELPERS ##########
 ###################################
 
-EMBEDDING_CACHE = Path('./data/embeddings/gemini_item1_cache.parquet')
+EMBEDDING_CACHE = Path('./data/cache/embeddings/gemini_item1_cache.parquet')
 
-ITEM1_CACHE = Path('./data/descriptions/item1_cache.parquet')
+ITEM1_CACHE = Path('./data/cache/descriptions/item1_cache.parquet')
 
 def text_hash(text: str) -> str:
     """
