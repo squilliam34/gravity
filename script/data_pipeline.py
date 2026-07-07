@@ -3,6 +3,8 @@ from datetime import date
 import pandas as pd
 from pathlib import Path
 import warnings
+from tqdm import tqdm
+import logging
 
 # Personal modules
 from data.data_loader import get_tickers
@@ -11,8 +13,9 @@ from src.distance.factor_model.factor_model import load_factor_data, calculate_r
 from src.mass.mass import create_market_cap_df
 print('Finished imports')
 
-# Suppress all FutureWarnings
+# Suppress FutureWarnings and YFinance warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 
 ########################################
 # PART 1: Import tickers
@@ -60,25 +63,26 @@ for year in range(2004, date.today().year + 1, 2):
 # PART 4: Loop over intervals
 ########################################
 
-for start_date, end_date in intervals:
+for start_date, end_date in tqdm(
+    intervals,
+    desc='Processing intervals',
+    unit='interval'
+):
 
     factor_path = Path(f'./data/S&P500/factor_distances/factor_distance_{start_date}_{end_date}.csv')
     market_cap_path = Path(f'./data/S&P500/market_caps/market_caps_{start_date}_{end_date}.csv')
 
-    print()
-    print('=' * 50)
-    print(f'Processing {start_date} → {end_date}')
-    print('=' * 50)
+    tqdm.write(f'Processing {start_date} → {end_date}')
 
     ####################################
     # Factor distances
     ####################################
 
     if factor_path.exists():
-        print(f'Factor distances for {start_date} → {end_date} already exists')
-        
+        tqdm.write(f'Factor distances already exist: {start_date} → {end_date}')
+
     else:
-        print('Loading factor data...')
+        tqdm.write('Loading factor data...')
         factor_data = load_factor_data(
             tickers=tickers,
             start_date=start_date,
@@ -94,16 +98,17 @@ for start_date, end_date in intervals:
         factor_distance.to_csv(
             f'./data/S&P500/factor_distances/factor_distance_{start_date}_{end_date}.csv'
         )
-        print('Factor distances saved.')
+        tqdm.write('Factor distances saved.')
 
     ####################################
     # Market cap products
     ####################################
 
     if market_cap_path.exists():
-        print(f'Market caps for {start_date} → {end_date} already exists')
+        tqdm.write(f'Market caps already exist: {start_date} → {end_date}')
+
     else:
-        print('Calculating market caps...')
+        tqdm.write('Calculating market caps...')
         market_caps = create_market_cap_df(
             tickers=tickers,
             start_date=start_date,
@@ -112,4 +117,4 @@ for start_date, end_date in intervals:
         market_caps.to_csv(
             f'./data/S&P500/market_caps/market_caps_{start_date}_{end_date}.csv'
         )
-        print('Market caps saved.')
+        tqdm.write('Market caps saved.')
