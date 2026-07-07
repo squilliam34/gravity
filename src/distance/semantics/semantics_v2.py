@@ -569,17 +569,4 @@ def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
     # Calculate distances between each company using cosine similarity (1-cos(theta))
     matrix = calculate_cosine_similarity_distance(embeddings)
 
-    df = pd.DataFrame(matrix, index=valid, columns=valid)
-
-    # Mask upper triangle (exclude diagonal + duplicates)
-    mask = np.triu(np.ones(df.shape), k=1).astype(bool)
-
-    long_df = (
-        df.where(mask)
-          .stack()
-          .to_frame('distance')
-    )
-
-    long_df.index.names = ['stock_i', 'stock_j']
-
-    return long_df
+    return pd.DataFrame(matrix, index=valid, columns=valid)
