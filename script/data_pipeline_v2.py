@@ -44,8 +44,7 @@ else:
     )
     print('Semantic distances saved.')
 
-tickers = sorted(set(semantic_df['stock_i'])
-    | set(semantic_df['stock_j']))
+tickers = semantic_df.index.to_list()
 
 ########################################
 # PART 3: Create 2-year intervals
