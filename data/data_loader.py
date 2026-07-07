@@ -219,21 +219,21 @@ def build_return_panel(tickers, start_date, end_date):
     """
     
     # Include a buffer of 7 days so that the first trading day isn't NaN from pct_change
-    start_date = add_years(start_date, years=1, days=7)
-
-    frames = {}
+    start_date = add_time(start_date, days=7)
+    frames = []
 
     for t in tickers:
         df = load_prices(t, start_date, end_date)
 
         if df.empty:
-            frames[t] = pd.Series(dtype=float)
             continue
 
-        returns = calculate_stock_returns(df)['Returns']
-        frames[t] = returns
+        df = calculate_stock_returns(df)
 
-    return pd.DataFrame(frames)
+        out = df[['Returns']].rename(columns={'Returns': t})
+        frames.append(out)
+
+    return pd.concat(frames, axis=1)
 
 def build_factor_panel(tickers, start_date, end_date):
     """
@@ -247,13 +247,11 @@ def build_factor_panel(tickers, start_date, end_date):
     Returns:
     pd.DataFrame: A DataFrame of factor data to use as regressors in the factor model.
     """
-    # The factor model also requires a year of data for the rolling window regression, 
-    # so I need another year of data for stocks, s&p, 10 year
-    # Include a buffer of 7 days so that the first trading day isn't NaN from pct_change
-    start_date_1 = add_years(start_date, years=1, days=7)
     # The momentum factor requires a year of data prior to its start, 
     # so I need to include an extra (second) year of data for stock prices
-    start_date_2 = add_years(start_date, years=2)
+    # Include a buffer of 7 days so that the first trading day isn't NaN from pct_change
+    start_date_1 = add_time(start_date, days=7)
+    start_date_2 = add_time(start_date, years=1)
     treasury = load_10_year_treasury_data(start_date_1, end_date)
     market = load_sp500_data(start_date_1, end_date)
 
@@ -271,9 +269,9 @@ def build_factor_panel(tickers, start_date, end_date):
     momentum = get_momentum_factor(prices)
 
     return pd.concat([
-        momentum.rename('Momentum'),
-        market['Market Return'],
-        treasury['Rate Change']
+        momentum.rename("Momentum"),
+        market["Market Return"],
+        treasury["Rate Change"]
     ], axis=1)
 
 def load_factor_data(tickers: list[str], 
@@ -292,6 +290,9 @@ def load_factor_data(tickers: list[str],
     Returns:
     DataFrame: The merged DataFrame for the stocks, S&P 500 index, and 10-year Treasury yield.
     """
+    # The factor model also requires a year of data for the rolling window regression, 
+    # so I need another year of data for stocks, s&p, 10 year
+    start_date = add_time(start_date, years=1)
     y = build_return_panel(tickers=tickers, start_date=start_date, end_date=end_date)
     X = build_factor_panel(tickers=tickers, start_date=start_date, end_date=end_date)
     data = y.join(X, how='inner')
@@ -299,4 +300,3 @@ def load_factor_data(tickers: list[str],
     data = data.sort_index()
 
     return data.loc[pd.Timestamp(start_date):]
-    return data.loc[start_date:]
