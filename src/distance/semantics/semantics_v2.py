@@ -153,26 +153,67 @@ def find_item1_start(text: str):
     '''
 
     candidates = []
-
     for pattern in ITEM1_PATTERNS:
-        for match in re.finditer(pattern, text, re.I):
-            candidates.append(match.start())
+        candidates.extend(
+            m.start() for m in re.finditer(pattern, text, re.I)
+        )
 
     if not candidates:
         return None
 
-    # Item 1 TOCs usually appear near beginning
-    # Real Item 1 normally has lots of text after it.
+    scored_candidates = []
+
     for pos in candidates:
 
-        remaining = text[pos:pos+5000]
+        # Look after heading
+        section_preview = text[pos:pos+5000]
 
-        # heuristic:
-        # real section should contain words after heading
-        if len(remaining.split()) > 100:
-            return pos
+        score = 0
 
-    return candidates[0]
+        # Need substantial text
+        words = section_preview.split()
+        if len(words) > 200:
+            score += 2
+
+        # Penalize table-of-content behavior
+        toc_indicators = [
+            r'item\s+1a',
+            r'item\s+2',
+            r'item\s+3',
+            r'item\s+4',
+            r'page',
+            r'\.{3,}',       # dotted TOC leaders
+        ]
+
+        toc_hits = sum(
+            len(re.findall(pattern, section_preview, re.I))
+            for pattern in toc_indicators
+        )
+        score -= toc_hits * 2
+
+        # Reward prose-like content
+        # Real sections have lots of sentence punctuation
+        sentences = len(
+            re.findall(r'[.!?]\s+[A-Z]', section_preview)
+        )
+        if sentences > 10:
+            score += 3
+
+        # Reward paragraph length
+        avg_word_len = np.mean(
+            [len(w) for w in words[:200]]
+        )
+        if avg_word_len > 4:
+            score += 1
+        scored_candidates.append(
+            (score, pos)
+        )
+        
+    # choose highest scoring candidate
+    scored_candidates.sort(
+        reverse=True
+    )
+    return scored_candidates[0][1]
 
 def extract_item1(html_text, max_words=MAX_WORDS):
     '''
