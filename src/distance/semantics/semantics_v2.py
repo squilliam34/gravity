@@ -258,6 +258,34 @@ def extract_item1(html_text, max_words=MAX_WORDS) -> str:
 
     return section
 
+def retrieve_item1_batch(cik_dict: dict) -> pd.DataFrame:
+   """
+   Retrieve business overviews from each company's 10-k.
+
+   Args:
+   cik_dict (dict): A dictionary of tickers and their matching ciks.
+
+   Returns:
+   pd.DataFrame: A DataFrame containing tickers, and their business overviews.
+   """
+   descriptions = {}
+
+   for ticker, cik in tqdm(cik_dict.items(), desc='Extracting Item 1'):
+      
+      try:
+         ticker = ticker.strip()
+         html = get_tenk(cik, headers=headers)
+         item1 = extract_item1(html)
+         descriptions[ticker] = item1
+         
+      except Exception as e:
+         descriptions[ticker] = None
+         print(f'\nFailed {ticker}: {e}')
+
+   descriptions = pd.DataFrame(descriptions.items(), columns=['ticker', 'item1_text'])
+
+   return descriptions
+
 def normalize(array: np.ndarray) -> np.ndarray:
     """
     Normalize a vector using L2 normalization so that its norm equals 1.
