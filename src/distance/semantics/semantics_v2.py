@@ -50,7 +50,7 @@ GEMINI = genai.Client(
 
 EMBEDDING_CACHE = Path('./data/embeddings/gemini_item1_cache.parquet')
 
-ITEM1_CACHE = Path("./data/descriptions/item1_cache.parquet")
+ITEM1_CACHE = Path('./data/descriptions/item1_cache.parquet')
 
 def text_hash(text: str) -> str:
     """
@@ -331,19 +331,19 @@ def retrieve_item1_batch(cik_dict: dict) -> pd.DataFrame:
         cache = pd.read_parquet(ITEM1_CACHE)
     else:
         cache = pd.DataFrame(
-            columns=["ticker", "item1_text"]
+            columns=['ticker', 'item1_text']
         )
 
     descriptions = {}
 
-    for ticker, cik in tqdm(cik_dict.items(), desc="Extracting Item 1"):
+    for ticker, cik in tqdm(cik_dict.items(), desc='Extracting Item 1'):
 
         ticker = ticker.strip()
 
         # Check cache first
         cached = cache.loc[
-            cache["ticker"] == ticker,
-            "item1_text"
+            cache['ticker'] == ticker,
+            'item1_text'
         ]
 
         if not cached.empty:
@@ -361,8 +361,8 @@ def retrieve_item1_batch(cik_dict: dict) -> pd.DataFrame:
                 [
                     cache,
                     pd.DataFrame({
-                        "ticker": [ticker],
-                        "item1_text": [item1]
+                        'ticker': [ticker],
+                        'item1_text': [item1]
                     })
                 ],
                 ignore_index=True
@@ -370,7 +370,7 @@ def retrieve_item1_batch(cik_dict: dict) -> pd.DataFrame:
 
         except Exception as e:
             descriptions[ticker] = None
-            print(f"\nFailed {ticker}: {e}")
+            print(f'\nFailed {ticker}: {e}')
 
     # Save updated cache
     ITEM1_CACHE.parent.mkdir(
@@ -379,14 +379,14 @@ def retrieve_item1_batch(cik_dict: dict) -> pd.DataFrame:
     )
 
     cache.drop_duplicates(
-        subset="ticker",
-        keep="last"
+        subset='ticker',
+        keep='last'
     ).to_parquet(
         ITEM1_CACHE,
         index=False
     )
 
-    return pd.DataFrame(descriptions.items(), columns=["ticker", "item1_text"])
+    return pd.DataFrame(descriptions.items(), columns=['ticker', 'item1_text'])
 
 def normalize(array: np.ndarray) -> np.ndarray:
     """
