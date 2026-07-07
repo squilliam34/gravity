@@ -208,7 +208,7 @@ def find_item1_start(text: str):
         scored_candidates.append(
             (score, pos)
         )
-        
+
     # choose highest scoring candidate
     scored_candidates.sort(
         reverse=True
@@ -257,3 +257,24 @@ def extract_item1(html_text, max_words=MAX_WORDS):
         return ''
 
     return section
+
+def normalize(array: np.ndarray) -> np.ndarray:
+    """
+    Normalize a vector using L2 normalization so that its norm equals 1.
+
+    This projects the vector onto the unit sphere, ensuring that comparisons 
+    focus on direction rather than magnitude. This is particularly useful when 
+    using cosine similarity, where only the angle between vectors matters.
+
+    Args:
+    array (np.ndarray): 1D array (vector) to normalize.
+
+    Returns:
+    np.ndarray: L2-normalized vector.
+    """
+    # If it's a 1D vector, axis=0. If it's a 2D matrix, axis=1.
+    axis = 1 if array.ndim > 1 else 0
+
+    keepdims=True if array.ndim > 1 else False
+    
+    return array / np.linalg.norm(array, axis=axis, keepdims=keepdims)
