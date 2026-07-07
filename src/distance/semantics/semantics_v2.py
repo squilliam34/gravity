@@ -36,7 +36,7 @@ ITEM1_END_PATTERN = re.compile(
     re.IGNORECASE
 )
 
-def build_cik_dict(FILEPATH: str):
+def build_cik_dict(FILEPATH: str, headers: dict=HEADERS):
     '''
     Build a dictionary of ciks and tickers.
 
@@ -59,7 +59,7 @@ def build_cik_dict(FILEPATH: str):
 
     # Get list of S&P 500 companies
     sp500 = pd.read_excel(FILEPATH)
-    sp500.drop(columns=['Sector', 'Name'], inplace=True)
+    sp500.drop(columns=[col for col in sp500.columns if col not in ['Ticker']], inplace=True)
     
     # Fill ciks with leading 0s
     companies['cik'] = companies['cik_str'].astype(str).str.zfill(10)
