@@ -5,12 +5,16 @@ from bs4 import BeautifulSoup
 import warnings
 from bs4.builder import XMLParsedAsHTMLWarning
 from tqdm import tqdm
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Ignore the XML parsed as HTML warning specifically
 warnings.filterwarnings('ignore', category=XMLParsedAsHTMLWarning)
 
 HEADERS = {
-    'User-Agent': 'William Fan wdfan0128@gmail.com',
+    'User-Agent': os.getenv('SEC_USER_AGENT'),
 }
 
 # Limit on Item 1 length
@@ -33,7 +37,7 @@ ITEM1_END_PATTERN = re.compile(
 )
 
 def build_cik_dict(FILEPATH: str):
-    """
+    '''
     Build a dictionary of ciks and tickers.
 
     Args:
@@ -41,7 +45,7 @@ def build_cik_dict(FILEPATH: str):
 
     Returns:
     dict: A dictionary of tickers and their cik codes.
-    """
+    '''
     # Retrieve ciks from sec
     url = 'https://www.sec.gov/files/company_tickers.json'
     response = requests.get(url, headers=headers)
@@ -77,7 +81,7 @@ def build_cik_dict(FILEPATH: str):
     return dict(zip(valid, ciks))
 
 def get_tenk(cik: str, headers: dict = HEADERS):
-    """
+    '''
     Retrieve a company's 10-k from the SEC using its cik.
 
     Args:
@@ -86,7 +90,7 @@ def get_tenk(cik: str, headers: dict = HEADERS):
 
     Returns:
     str: A string of the 10-k filing.
-    """
+    '''
     submissions_url = f'https://data.sec.gov/submissions/CIK{cik}.json'
     submissions = requests.get(
         submissions_url,
@@ -107,7 +111,7 @@ def get_tenk(cik: str, headers: dict = HEADERS):
     return html
 
 def html_to_text(html: str):
-    """
+    '''
     Convert SEC filing HTML to clean text.
 
     Args:
@@ -115,7 +119,7 @@ def html_to_text(html: str):
 
     Returns:
     str: The cleaned text.
-    """
+    '''
 
     soup = BeautifulSoup(html, 'lxml')
 
@@ -137,7 +141,7 @@ def html_to_text(html: str):
     return text.strip()
 
 def find_item1_start(text: str):
-    """
+    '''
     Find candidate Item 1 locations. Avoid TOC false positives by 
     requiring sufficient content after the match.
 
@@ -146,7 +150,7 @@ def find_item1_start(text: str):
 
     Returns:
     int: A likely position of the start of Item 1.
-    """
+    '''
 
     candidates = []
 
@@ -171,7 +175,7 @@ def find_item1_start(text: str):
     return candidates[0]
 
 def extract_item1(html_text, max_words=MAX_WORDS):
-    """
+    '''
     Extracts Item 1 from the 10-k.
 
     Args:
@@ -180,7 +184,7 @@ def extract_item1(html_text, max_words=MAX_WORDS):
 
     Returns:
     str: The Item 1 text, business overview.
-    """
+    '''
 
     text = html_to_text(html_text)
 
