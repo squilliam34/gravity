@@ -56,3 +56,33 @@ def build_cik_dict(FILEPATH: str):
         valid.append(ticker)
 
     return dict(zip(valid, ciks))
+
+def get_tenk(cik: str, headers: dict = HEADERS):
+    """
+    Retrieve a company's 10-k from the SEC using its cik.
+
+    Args:
+    cik (str): The cik code of the desired company.
+    headers (dict): The headers to use in order to access the SEC website.
+
+    Returns:
+    str: A string of the 10-k filing.
+    """
+    submissions_url = f'https://data.sec.gov/submissions/CIK{cik}.json'
+    submissions = requests.get(
+        submissions_url,
+        headers=headers
+    ).json()
+    recent = pd.DataFrame(submissions['filings']['recent'])
+    # Find the indexes of all 10-K filings
+
+    tenk = recent[recent['form'] == '10-K']
+    latest = tenk.iloc[0]
+    accession = latest['accessionNumber'].replace('-', '')
+    url = (
+        f'https://www.sec.gov/Archives/edgar/data/'
+        f'{int(cik)}/{accession}/{latest['primaryDocument']}'
+    )
+
+    html = requests.get(url, headers=headers).text
+    return html
