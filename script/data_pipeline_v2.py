@@ -22,6 +22,7 @@ logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 ########################################
 
 tickers = get_tickers('./data/csv/SP500.xlsx')
+tickers.sort()
 
 ########################################
 # PART 2: Semantic distances
@@ -32,6 +33,9 @@ semantic_path = Path('./data/S&P500/semantics_tenk/semantic_distances.csv')
 # --- SEMANTIC DISTANCES ---
 if semantic_path.exists():
     print('Semantic distances already exist...')
+
+    # Read in existing data to construct tickers that had valid 10-ks
+    semantic_df = pd.read_csv('./data/S&P500/semantics_tenk/semantic_distances.csv')
 else:
     print('Computing semantic distances...')
     semantic_df = get_semantic_distances(tickers)
@@ -39,6 +43,9 @@ else:
         './data/S&P500/semantics_tenk/semantic_distances.csv'
     )
     print('Semantic distances saved.')
+
+tickers = sorted(set(semantic_df['stock_i'])
+    | set(semantic_df['stock_j']))
 
 ########################################
 # PART 3: Create 2-year intervals
