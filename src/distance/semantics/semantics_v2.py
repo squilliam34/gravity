@@ -79,7 +79,7 @@ def build_cik_dict(tickers: list[str], headers: dict=HEADERS):
         valid.append(ticker)
 
     return dict(zip(valid, ciks))
-    
+
 def get_tenk(cik: str, headers: dict = HEADERS) -> str:
     '''
     Retrieve a company's 10-k from the SEC using its cik.
@@ -316,3 +316,63 @@ def embed_text(descriptions: pd.DataFrame) -> np.ndarray:
     # Convert to numpy
     X = np.vstack(embeddings)
     return normalize(X), len(descriptions) - len(embed_df)
+
+def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
+    """
+    Calculates the distance in semantic meaning between stocks in a matrix using
+    the cosine similarity. Initially calculates the cosine similarity between every
+    element within the matrix then subtracts from 1 to arrive at a distance value.
+
+    Parameters:
+    - matrix (np.ndarray): The matrix of embeddings to calculate distances between.
+
+    Returns:
+    - np.ndarray: A matrix of distance values between every company in the matrix.
+    """
+    dist = 1 - np.clip(matrix @ matrix.T, -1, 1)
+    np.fill_diagonal(dist, 0.0)
+    return dist
+
+def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
+    """
+    Takes list tickers and calculates the differences in semantic meaning
+    between them. It embeds a description of each company's operations and calculates a 
+    distance measure using the cosine similarity between each stock.
+
+    Args:
+    tickers (list[str]): A list of tickers to get the distances between between.
+
+    Returns:
+    pd.DataFrame: A DataFrame that represents a matrix of distances, indexed by ticker symbols.
+    """
+
+    # Retrieve descriptions
+    print('Retrieving company descriptions...')
+    ciks = build_cik_dict(tickers)
+    descriptions = retrieve_item1_batch(ciks)
+
+    # Embed descriptions
+    print('Embedding descriptions...')
+    result = embed_text(descriptions)
+    embeddings = result[0]
+    print(f'Dropped companies = {result[1]}')
+    valid = result[2]
+
+    print('Calculating distances...')
+    # Calculate distances between each company using cosine similarity (1-cos(theta))
+    matrix = calculate_cosine_similarity_distance(embeddings)
+
+    df = pd.DataFrame(matrix, index=valid, columns=valid)
+
+    # Mask upper triangle (exclude diagonal + duplicates)
+    mask = np.triu(np.ones(df.shape), k=1).astype(bool)
+
+    long_df = (
+        df.where(mask)
+          .stack()
+          .to_frame('distance')
+    )
+
+    long_df.index.names = ['stock_i', 'stock_j']
+
+    return long_df
