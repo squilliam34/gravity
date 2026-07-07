@@ -219,15 +219,19 @@ def build_return_panel(tickers, start_date, end_date):
     Returns:
     pd.DataFrame: A DataFrame of stock returns to use as a target variable in the factor model.
     """
-    
     # Include a buffer of 7 days so that the first trading day isn't NaN from pct_change
     start_date = add_time(start_date, days=7)
     frames = []
+
+    # Keep track of companies that maybe IPO'd after the period since I want
+    # a consistent universe
+    missing = []
 
     for t in tickers:
         df = load_prices(t, start_date, end_date)
 
         if df.empty:
+            missing.append(t)
             continue
 
         df = calculate_stock_returns(df)
@@ -235,7 +239,16 @@ def build_return_panel(tickers, start_date, end_date):
         out = df[['Returns']].rename(columns={'Returns': t})
         frames.append(out)
 
-    return pd.concat(frames, axis=1)
+    panel = pd.concat(frames, axis=1)
+
+    # Assign NaN to missing stocks
+    for t in missing:
+        panel[t] = np.nan
+
+    # Preserve original ticker ordering
+    panel = panel.reindex(columns=tickers)
+
+    return panel
 
 def build_factor_panel(tickers, start_date, end_date):
     """
@@ -259,21 +272,31 @@ def build_factor_panel(tickers, start_date, end_date):
 
     prices = []
 
+    # Keep track of companies that maybe IPO'd after the period since I want
+    # a consistent universe
+    missing = []
+
     for t in tickers:
         df = load_prices(t, start_date_2, end_date)
         if df.empty:
+            missing.append(t)
             continue
 
         prices.append(df[['Close']].rename(columns={'Close': t}))
 
     prices = pd.concat(prices, axis=1)
 
+    # Assign NaN to missing stocks
+    for t in missing:
+        prices[t] = np.nan
+    prices = prices.reindex(columns=tickers)
+
     momentum = get_momentum_factor(prices)
 
     return pd.concat([
-        momentum.rename("Momentum"),
-        market["Market Return"],
-        treasury["Rate Change"]
+        momentum.rename('Momentum'),
+        market['Market Return'],
+        treasury['Rate Change']
     ], axis=1)
 
 def load_factor_data(tickers: list[str], 
