@@ -41,16 +41,16 @@ ITEM1_END_PATTERN = re.compile(
 GEMINI = genai.Client(
     api_key=os.getenv('GEMINI_KEY'))
 
-def build_cik_dict(FILEPATH: str, headers: dict=HEADERS) -> dict:
-    '''
+def build_cik_dict(tickers: list[str], headers: dict=HEADERS):
+    """
     Build a dictionary of ciks and tickers.
 
     Args:
-    FILEPATH (str): The path to an excel spreadsheet of tickers.
+    tickers (list[str]): The list of tickers to build a cik_dict for.
 
     Returns:
     dict: A dictionary of tickers and their cik codes.
-    '''
+    """
     # Retrieve ciks from sec
     url = 'https://www.sec.gov/files/company_tickers.json'
     response = requests.get(url, headers=headers)
@@ -61,10 +61,6 @@ def build_cik_dict(FILEPATH: str, headers: dict=HEADERS) -> dict:
         data,
         orient='index'
     )
-
-    # Get list of S&P 500 companies
-    sp500 = pd.read_excel(FILEPATH)
-    sp500.drop(columns=[col for col in sp500.columns if col not in ['Ticker']], inplace=True)
     
     # Fill ciks with leading 0s
     companies['cik'] = companies['cik_str'].astype(str).str.zfill(10)
@@ -72,7 +68,6 @@ def build_cik_dict(FILEPATH: str, headers: dict=HEADERS) -> dict:
         ['ticker', 'cik', 'title']
     ]
 
-    tickers = [ticker for ticker in sp500['Ticker']]
     valid = []
     ciks = []
     for ticker in tickers:
@@ -84,7 +79,7 @@ def build_cik_dict(FILEPATH: str, headers: dict=HEADERS) -> dict:
         valid.append(ticker)
 
     return dict(zip(valid, ciks))
-
+    
 def get_tenk(cik: str, headers: dict = HEADERS) -> str:
     '''
     Retrieve a company's 10-k from the SEC using its cik.
