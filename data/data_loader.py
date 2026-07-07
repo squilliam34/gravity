@@ -242,8 +242,17 @@ def build_return_panel(tickers, start_date, end_date):
     panel = pd.concat(frames, axis=1)
 
     # Assign NaN to missing stocks
-    for t in missing:
-        panel[t] = np.nan
+    if missing:
+        missing_df = pd.DataFrame(
+            np.nan,
+            index=panel.index,
+            columns=missing
+        )
+
+        panel = pd.concat(
+            [panel, missing_df],
+            axis=1
+        )
 
     # Preserve original ticker ordering
     panel = panel.reindex(columns=tickers)
@@ -287,8 +296,17 @@ def build_factor_panel(tickers, start_date, end_date):
     prices = pd.concat(prices, axis=1)
 
     # Assign NaN to missing stocks
-    for t in missing:
-        prices[t] = np.nan
+    if missing:
+        missing_df = pd.DataFrame(
+            np.nan,
+            index=prices.index,
+            columns=missing
+        )
+
+        prices = pd.concat(
+            [prices, missing_df],
+            axis=1
+        )
     prices = prices.reindex(columns=tickers)
 
     momentum = get_momentum_factor(prices)
