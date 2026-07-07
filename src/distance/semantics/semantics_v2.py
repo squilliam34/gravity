@@ -7,6 +7,8 @@ from bs4.builder import XMLParsedAsHTMLWarning
 from tqdm import tqdm
 from dotenv import load_dotenv
 import os
+import numpy as np
+from google import genai
 
 load_dotenv()
 
@@ -36,7 +38,7 @@ ITEM1_END_PATTERN = re.compile(
     re.IGNORECASE
 )
 
-def build_cik_dict(FILEPATH: str, headers: dict=HEADERS):
+def build_cik_dict(FILEPATH: str, headers: dict=HEADERS) -> dict:
     '''
     Build a dictionary of ciks and tickers.
 
@@ -80,7 +82,7 @@ def build_cik_dict(FILEPATH: str, headers: dict=HEADERS):
 
     return dict(zip(valid, ciks))
 
-def get_tenk(cik: str, headers: dict = HEADERS):
+def get_tenk(cik: str, headers: dict = HEADERS) -> str:
     '''
     Retrieve a company's 10-k from the SEC using its cik.
 
@@ -110,7 +112,7 @@ def get_tenk(cik: str, headers: dict = HEADERS):
     html = requests.get(url, headers=headers).text
     return html
 
-def html_to_text(html: str):
+def html_to_text(html: str) -> str:
     '''
     Convert SEC filing HTML to clean text.
 
@@ -140,7 +142,7 @@ def html_to_text(html: str):
 
     return text.strip()
 
-def find_item1_start(text: str):
+def find_item1_start(text: str) -> int:
     '''
     Find candidate Item 1 locations. Avoid TOC false positives by 
     requiring sufficient content after the match.
@@ -215,7 +217,7 @@ def find_item1_start(text: str):
     )
     return scored_candidates[0][1]
 
-def extract_item1(html_text, max_words=MAX_WORDS):
+def extract_item1(html_text, max_words=MAX_WORDS) -> str:
     '''
     Extracts Item 1 from the 10-k.
 
