@@ -13,6 +13,25 @@ HEADERS = {
     'User-Agent': 'William Fan wdfan0128@gmail.com',
 }
 
+# Limit on Item 1 length
+MAX_WORDS = 4000
+
+# Possible Item 1 headers
+ITEM1_PATTERNS = [
+    r'\bitem\s+1\s*[\.\-:]*\s*business\b',
+    r'\bitem\s+1\s*[\.\-:]*\s*the\s+company\b',
+    r'\bitem\s+1\s*[\.\-:]*\s*company\s+overview\b',
+    r'\bitem\s+1\s*[\.\-:]*\s*overview\b',
+    r'\bitem\s+1\s*[\.\-:]*\s*description\b',
+]
+
+ITEM1_END_PATTERN = re.compile(
+    r'\bitem\s+1a\b'
+    r'|\bitem\s+2\b'
+    r'|\bitem\s+1b\b',
+    re.IGNORECASE
+)
+
 def build_cik_dict(FILEPATH: str):
     """
     Build a dictionary of ciks and tickers.
