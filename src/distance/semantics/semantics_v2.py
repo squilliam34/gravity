@@ -47,6 +47,7 @@ def build_cik_dict(tickers: list[str], headers: dict=HEADERS):
 
     Args:
     tickers (list[str]): The list of tickers to build a cik_dict for.
+    headers (dict): The headers to use in order to access the SEC website.
 
     Returns:
     dict: A dictionary of tickers and their cik codes.
@@ -258,12 +259,13 @@ def extract_item1(html_text, max_words=MAX_WORDS) -> str:
 
     return section
 
-def retrieve_item1_batch(cik_dict: dict) -> pd.DataFrame:
+def retrieve_item1_batch(cik_dict: dict, headers: dict=HEADERS) -> pd.DataFrame:
    """
    Retrieve business overviews from each company's 10-k.
 
    Args:
    cik_dict (dict): A dictionary of tickers and their matching ciks.
+   headers (dict): The headers to use in order to access the SEC website.
 
    Returns:
    pd.DataFrame: A DataFrame containing tickers, and their business overviews.
@@ -272,15 +274,15 @@ def retrieve_item1_batch(cik_dict: dict) -> pd.DataFrame:
 
    for ticker, cik in tqdm(cik_dict.items(), desc='Extracting Item 1'):
       
-      try:
-         ticker = ticker.strip()
-         html = get_tenk(cik, headers=headers)
-         item1 = extract_item1(html)
-         descriptions[ticker] = item1
+    try:
+        ticker = ticker.strip()
+        html = get_tenk(cik, headers=headers)
+        item1 = extract_item1(html)
+        descriptions[ticker] = item1
          
-      except Exception as e:
-         descriptions[ticker] = None
-         print(f'\nFailed {ticker}: {e}')
+    except Exception as e:
+        descriptions[ticker] = None
+        print(f'\nFailed {ticker}: {e}')
 
    descriptions = pd.DataFrame(descriptions.items(), columns=['ticker', 'item1_text'])
 
@@ -317,7 +319,7 @@ def embed_text(descriptions: pd.DataFrame) -> np.ndarray:
 
     Returns:
     tuple: First item is the embeddings matrix. Second is the number of descriptions 
-      that got dropped.
+      that got dropped. Third is the kept tickers.
     """
     # Sometimes the Item 1 comes back blank
     embed_df = descriptions.copy()
@@ -343,7 +345,7 @@ def embed_text(descriptions: pd.DataFrame) -> np.ndarray:
 
     # Convert to numpy
     X = np.vstack(embeddings)
-    return normalize(X), len(descriptions) - len(embed_df)
+    return normalize(X), len(descriptions) - len(embed_df), embed_df['ticker'].to_list()
 
 def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
     """
