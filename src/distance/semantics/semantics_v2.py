@@ -105,3 +105,110 @@ def get_tenk(cik: str, headers: dict = HEADERS):
 
     html = requests.get(url, headers=headers).text
     return html
+
+def html_to_text(html: str):
+    """
+    Convert SEC filing HTML to clean text.
+
+    Args:
+    html (str): The html text of the 10-k from the SEC website.
+
+    Returns:
+    str: The cleaned text.
+    """
+
+    soup = BeautifulSoup(html, 'lxml')
+
+    # Remove non-content
+    for tag in soup([
+        'script',
+        'style',
+        'ix:header',
+        'ix:hidden'
+    ]):
+        tag.decompose()
+
+    text = soup.get_text(' ')
+
+    # normalize whitespace
+    text = text.replace('\xa0', ' ')
+    text = re.sub(r'\s+', ' ', text)
+
+    return text.strip()
+
+def find_item1_start(text: str):
+    """
+    Find candidate Item 1 locations. Avoid TOC false positives by 
+    requiring sufficient content after the match.
+
+    Args:
+    text (str): The cleaned 10-k.
+
+    Returns:
+    int: A likely position of the start of Item 1.
+    """
+
+    candidates = []
+
+    for pattern in ITEM1_PATTERNS:
+        for match in re.finditer(pattern, text, re.I):
+            candidates.append(match.start())
+
+    if not candidates:
+        return None
+
+    # Item 1 TOCs usually appear near beginning
+    # Real Item 1 normally has lots of text after it.
+    for pos in candidates:
+
+        remaining = text[pos:pos+5000]
+
+        # heuristic:
+        # real section should contain words after heading
+        if len(remaining.split()) > 100:
+            return pos
+
+    return candidates[0]
+
+def extract_item1(html_text, max_words=MAX_WORDS):
+    """
+    Extracts Item 1 from the 10-k.
+
+    Args:
+    html_text (str): The raw 10-k text.
+    max_words (int): The maximum number of words to pull for Item 1.
+
+    Returns:
+    str: The Item 1 text, business overview.
+    """
+
+    text = html_to_text(html_text)
+
+    start = find_item1_start(text)
+    if start is None:
+        return ''
+
+    # Start after heading itself
+    section = text[start:]
+
+    # Find end
+    end = ITEM1_END_PATTERN.search(
+        section,
+        pos=300)
+
+    if end:
+        section = section[:end.start()]
+
+    # Limit runaway extraction
+    words = section.split()
+
+    if len(words) > max_words:
+        section = ' '.join(words[:max_words])
+
+    section = section.strip()
+
+    # Validation
+    if len(section) < 500:
+        return ''
+
+    return section
