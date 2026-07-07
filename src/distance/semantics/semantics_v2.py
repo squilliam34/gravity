@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 import os
 import numpy as np
 from google import genai
+import hashlib
+from pathlib import Path
+import time
 
 load_dotenv()
 
@@ -40,6 +43,58 @@ ITEM1_END_PATTERN = re.compile(
 
 GEMINI = genai.Client(
     api_key=os.getenv('GEMINI_KEY'))
+
+###################################
+########## CACHE HELPERS ##########
+###################################
+
+EMBEDDING_CACHE = Path('./data/embeddings/gemini_item1_cache.parquet')
+
+ITEM1_CACHE = Path("./data/descriptions/item1_cache.parquet")
+
+def text_hash(text: str) -> str:
+    """
+    Create unique identifier for a description.
+    """
+    return hashlib.md5(
+        text.encode('utf-8')
+    ).hexdigest()
+
+
+def load_embedding_cache() -> pd.DataFrame:
+    """
+    Load existing embedding cache.
+    """
+
+    if EMBEDDING_CACHE.exists():
+        return pd.read_parquet(EMBEDDING_CACHE)
+
+    return pd.DataFrame(
+        columns=[
+            'ticker',
+            'text_hash',
+            'embedding'
+        ]
+    )
+
+def save_embedding_cache(cache: pd.DataFrame):
+    """
+    Save embedding cache.
+    """
+
+    EMBEDDING_CACHE.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    cache.to_parquet(
+        EMBEDDING_CACHE,
+        index=False
+    )
+
+###################################
+######### 10-k Functions ##########
+###################################
 
 def build_cik_dict(tickers: list[str], headers: dict=HEADERS):
     """
@@ -82,7 +137,7 @@ def build_cik_dict(tickers: list[str], headers: dict=HEADERS):
     return dict(zip(valid, ciks))
 
 def get_tenk(cik: str, headers: dict = HEADERS) -> str:
-    '''
+    """
     Retrieve a company's 10-k from the SEC using its cik.
 
     Args:
@@ -91,7 +146,7 @@ def get_tenk(cik: str, headers: dict = HEADERS) -> str:
 
     Returns:
     str: A string of the 10-k filing.
-    '''
+    """
     submissions_url = f'https://data.sec.gov/submissions/CIK{cik}.json'
     submissions = requests.get(
         submissions_url,
@@ -112,7 +167,7 @@ def get_tenk(cik: str, headers: dict = HEADERS) -> str:
     return html
 
 def html_to_text(html: str) -> str:
-    '''
+    """
     Convert SEC filing HTML to clean text.
 
     Args:
@@ -120,7 +175,7 @@ def html_to_text(html: str) -> str:
 
     Returns:
     str: The cleaned text.
-    '''
+    """
 
     soup = BeautifulSoup(html, 'lxml')
 
@@ -142,7 +197,7 @@ def html_to_text(html: str) -> str:
     return text.strip()
 
 def find_item1_start(text: str) -> int:
-    '''
+    """
     Find candidate Item 1 locations. Avoid TOC false positives by 
     requiring sufficient content after the match.
 
@@ -151,7 +206,7 @@ def find_item1_start(text: str) -> int:
 
     Returns:
     int: A likely position of the start of Item 1.
-    '''
+    """
 
     candidates = []
     for pattern in ITEM1_PATTERNS:
@@ -217,7 +272,7 @@ def find_item1_start(text: str) -> int:
     return scored_candidates[0][1]
 
 def extract_item1(html_text, max_words=MAX_WORDS) -> str:
-    '''
+    """
     Extracts Item 1 from the 10-k.
 
     Args:
@@ -226,7 +281,7 @@ def extract_item1(html_text, max_words=MAX_WORDS) -> str:
 
     Returns:
     str: The Item 1 text, business overview.
-    '''
+    """
 
     text = html_to_text(html_text)
 
@@ -259,34 +314,79 @@ def extract_item1(html_text, max_words=MAX_WORDS) -> str:
 
     return section
 
-def retrieve_item1_batch(cik_dict: dict, headers: dict=HEADERS) -> pd.DataFrame:
-   """
-   Retrieve business overviews from each company's 10-k.
+def retrieve_item1_batch(cik_dict: dict) -> pd.DataFrame:
+    """
+    Retrieve Item 1 business descriptions, using a local cache
+    so descriptions are only extracted once.
 
-   Args:
-   cik_dict (dict): A dictionary of tickers and their matching ciks.
-   headers (dict): The headers to use in order to access the SEC website.
+    Args:
+    cik_dict (dict): Dictionary mapping ticker -> CIK.
 
-   Returns:
-   pd.DataFrame: A DataFrame containing tickers, and their business overviews.
-   """
-   descriptions = {}
+    Returns:
+    pd.DataFrame containing ticker and Item 1 text.
+    """
 
-   for ticker, cik in tqdm(cik_dict.items(), desc='Extracting Item 1'):
-      
-    try:
+    # Load cache if it exists
+    if ITEM1_CACHE.exists():
+        cache = pd.read_parquet(ITEM1_CACHE)
+    else:
+        cache = pd.DataFrame(
+            columns=["ticker", "item1_text"]
+        )
+
+    descriptions = {}
+
+    for ticker, cik in tqdm(cik_dict.items(), desc="Extracting Item 1"):
+
         ticker = ticker.strip()
-        html = get_tenk(cik, headers=headers)
-        item1 = extract_item1(html)
-        descriptions[ticker] = item1
-         
-    except Exception as e:
-        descriptions[ticker] = None
-        print(f'\nFailed {ticker}: {e}')
 
-   descriptions = pd.DataFrame(descriptions.items(), columns=['ticker', 'item1_text'])
+        # Check cache first
+        cached = cache.loc[
+            cache["ticker"] == ticker,
+            "item1_text"
+        ]
 
-   return descriptions
+        if not cached.empty:
+            descriptions[ticker] = cached.iloc[0]
+            continue
+
+        try:
+            html = get_tenk(cik)
+            item1 = extract_item1(html)
+
+            descriptions[ticker] = item1
+
+            # Immediately add to cache so progress isn't lost
+            cache = pd.concat(
+                [
+                    cache,
+                    pd.DataFrame({
+                        "ticker": [ticker],
+                        "item1_text": [item1]
+                    })
+                ],
+                ignore_index=True
+            )
+
+        except Exception as e:
+            descriptions[ticker] = None
+            print(f"\nFailed {ticker}: {e}")
+
+    # Save updated cache
+    ITEM1_CACHE.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    cache.drop_duplicates(
+        subset="ticker",
+        keep="last"
+    ).to_parquet(
+        ITEM1_CACHE,
+        index=False
+    )
+
+    return pd.DataFrame(descriptions.items(), columns=["ticker", "item1_text"])
 
 def normalize(array: np.ndarray) -> np.ndarray:
     """
@@ -326,26 +426,103 @@ def embed_text(descriptions: pd.DataFrame) -> np.ndarray:
 
     embed_df = embed_df[
         embed_df['item1_text']
-            .fillna('')
-            .str.strip()
-            .ne('')
-    ]
-    text = embed_df['item1_text'].tolist()
+        .fillna('')
+        .str.strip()
+        .ne('')
+    ].copy()
 
-    # Batch embeddings
-    response = GEMINI.models.embed_content(
-        model='gemini-embedding-001',
-        contents=text,
-        config=genai.types.EmbedContentConfig(task_type='SEMANTIC_SIMILARITY')
+    if embed_df.empty:
+        return np.empty((0,3072)), len(descriptions), []
+
+    # Generate hashes
+    embed_df['text_hash'] = (
+        embed_df['item1_text']
+        .apply(text_hash)
     )
-    embeddings = [
-        e.values 
-        for e in response.embeddings
-    ]
 
-    # Convert to numpy
-    X = np.vstack(embeddings)
-    return normalize(X), len(descriptions) - len(embed_df), embed_df['ticker'].to_list()
+    cache = load_embedding_cache()
+
+    # Split cached vs missing
+    cached = embed_df.merge(
+        cache,
+        on=['ticker', 'text_hash'],
+        how='inner'
+    )
+
+    missing = embed_df.merge(
+        cache,
+        on=['ticker', 'text_hash'],
+        how='left',
+        indicator=True
+    )
+
+    missing = missing[missing['_merge']=='left_only']
+
+    print(f'Cached embeddings: {len(cached)}')
+    print(f'New embeddings required: {len(missing)}')
+
+
+    embeddings_dict = {}
+
+    # Load cached embeddings
+    for _, row in cached.iterrows():
+        embeddings_dict[row['ticker']] = np.array(
+            row['embedding']
+        )
+
+    # Embed new descriptions
+    if len(missing) > 0:
+
+        new_embeddings = []
+        texts = missing['item1_text'].tolist()
+        batch_size = 100
+
+        for i in tqdm(
+            range(0,len(texts),batch_size),
+            desc='Embedding batches'
+        ):
+
+            batch = texts[i:i+batch_size]
+
+            response = GEMINI.models.embed_content(
+                model='gemini-embedding-001',
+                contents=batch,
+                config=genai.types.EmbedContentConfig(
+                    task_type='SEMANTIC_SIMILARITY'
+                )
+            )
+
+            new_embeddings.extend(
+                [e.values for e in response.embeddings]
+            )
+
+            # avoid quota spikes
+            time.sleep(1)
+
+        new_cache = pd.DataFrame({
+            'ticker': missing['ticker'].tolist(),
+            'text_hash': missing['text_hash'].tolist(),
+            'embedding': new_embeddings
+        })
+
+        cache = pd.concat([cache,new_cache], ignore_index=True)
+
+        save_embedding_cache(cache)
+
+        for ticker, emb in zip(missing['ticker'], new_embeddings):
+            embeddings_dict[ticker] = np.array(emb)
+
+    # Preserve ordering
+    valid = embed_df['ticker'].tolist()
+
+    X = np.vstack(
+        [
+            embeddings_dict[ticker]
+            for ticker in valid
+        ]
+    )
+
+    return (normalize(X), len(descriptions)-len(embed_df), valid)
 
 def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
     """
