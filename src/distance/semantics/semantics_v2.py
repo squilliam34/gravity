@@ -496,8 +496,8 @@ def embed_text(descriptions: pd.DataFrame) -> np.ndarray:
                 [e.values for e in response.embeddings]
             )
 
-            # avoid quota spikes
-            time.sleep(1)
+            # Gemini API has 100k token/minute limit, which I hit after 2 batches
+            time.sleep(30)
 
         new_cache = pd.DataFrame({
             'ticker': missing['ticker'].tolist(),
