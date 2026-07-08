@@ -28,19 +28,19 @@ tickers.sort()
 # PART 2: Semantic distances
 ########################################
 
-semantic_path = Path('./data/S&P500/semantics_tenk/semantic_distances.csv')
+semantic_path = Path('./data/S&P500/semantics_tenk/raw/semantic_distances.csv')
 
 # --- SEMANTIC DISTANCES ---
 if semantic_path.exists():
     print('Semantic distances already exist...')
 
     # Read in existing data to construct tickers that had valid 10-ks
-    semantic_df = pd.read_csv('./data/S&P500/semantics_tenk/semantic_distances.csv')
+    semantic_df = pd.read_csv('./data/S&P500/semantics_tenk/raw/semantic_distances.csv')
 else:
     print('Computing semantic distances...')
     semantic_df = get_semantic_distances(tickers)
     semantic_df.to_csv(
-        './data/S&P500/semantics_tenk/semantic_distances.csv'
+        './data/S&P500/semantics_tenk/raw/semantic_distances.csv'
     )
     print('Semantic distances saved.')
 
