@@ -2,11 +2,10 @@
 
 class Cluster:
     
-    def __init__(self, label:int, tickers:list[str], date:str, embeddings=None, market_caps=None, factor_data=None):
+    def __init__(self, label:int, tickers:list[str], embeddings=None, market_caps=None, factor_data=None):
 
         self.label = label
         self.tickers = tickers
-        self.date = date
         
         self.embeddings = embeddings
         self.market_caps = market_caps
