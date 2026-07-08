@@ -14,3 +14,6 @@ class Cluster:
 
     def __str__(self):
         return f'Cluster {self.label}: {', '.join(self.tickers)}'
+
+    def get_tickers(self):
+        return self.tickers
