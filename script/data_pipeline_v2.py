@@ -6,6 +6,7 @@ import warnings
 from tqdm import tqdm
 import logging
 import hdbscan
+import numpy as np
 
 # Dimensionality reduction imports
 import umap
