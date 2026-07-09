@@ -1,6 +1,8 @@
 '''Script to fix 10-k issues'''
 # Some companies had TOC false positives or Item1's that were covered in boilerplate, page numbers, links, etc
-# Of the 122 tickers I wanted to replace, only 4 failed, which I filled in manually
+# R1: Of the 122 tickers I wanted to replace, only 4 failed, which I filled in manually
+# R2: Had to run it on 7 more tickers that were getting clustered weirdly (7/7 success)
+# R3: 10 more clustering weirdly (8/10)
 from edgar import *
 import pandas as pd
 import os
@@ -124,15 +126,6 @@ def repair_item1_cache(tickers):
     print(f'Failed {len(errors)} tickers: {errors}')
 
 
-bad_tickers = ['AFL', 'ALL', 'COHR', 'CBRE', 'IDXX', 'EME', 'HSIC', 'ICE', 'GOOG', 'GOOGL', 
-'GNRC', 'HST', 'DHR', 'CSGP', 'LHX', 'MO', 'MU', 'STLD', 'STT', 'TXT', 'VLTO', 'WM', 'TER', 
-'PKG', 'PNC', 'NDAQ', 'PFE', 'REG', 'QCOM', 'DAL', 'ACN', 'BF-B', 'NI', 'KDP', 'TAP', 'STZ', 
-'MNST', 'JNJ', 'INCY', 'MA', 'UHS', 'TSLA', 'TMO', 'TT', 'KO', 'MDT', 'NWSA', 'NWS', 'IBKR', 
-'BAX', 'F', 'EFX', 'GM', 'CTVA', 'ALLE', 'ADP', 'APO', 'CMCSA', 'COR', 'BMY', 'BDX', 'AIG', 
-'AXON', 'APTV', 'PTC', 'MCD', 'KIM', 'INTC', 'REGN', 'SYF', 'TKO', 'VRTX', 'EXPD', 'BRO', 'AMCR', 
-'AMD', 'GE', 'DE', 'COST', 'MSFT', 'CIEN', 'CDW', 'CRWD', 'DELL', 'AKAM', 'BBY', 'ANET', 'AVGO', 
-'SMCI', 'WDC', 'STX', 'FTNT', 'FFIV', 'IBM', 'HPQ', 'HPE', 'LITE', 'PANW', 'NVDA', 'SNDK', 'ORCL', 
-'HAS', 'EL', 'DOW', 'BKR', 'ADM', 'AMGN', 'FDS', 'CRL', 'CME', 'COF', 'CMS', 'NEE', 'ITW', 'IT', 
-'LYV', 'SYY', 'SLB', 'WMT']
+bad_tickers = ['ALB', 'BG', 'DLTR', 'ECHO', 'EXPE', 'KKR', 'MPC', 'NTAP', 'TFC', 'HIG']
 
 repair_item1_cache(bad_tickers)
