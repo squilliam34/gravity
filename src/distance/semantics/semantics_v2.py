@@ -12,6 +12,7 @@ from google import genai
 import hashlib
 from pathlib import Path
 import time
+from sklearn.decomposition import PCA
 
 load_dotenv()
 
@@ -522,7 +523,7 @@ def embed_text(descriptions: pd.DataFrame) -> np.ndarray:
         ]
     )
 
-    return (normalize(X), len(descriptions)-len(embed_df), valid)
+    return (X, len(descriptions)-len(embed_df), valid)
 
 def calculate_cosine_similarity_distance(matrix: np.ndarray) -> np.ndarray:
     """
@@ -564,6 +565,13 @@ def get_semantic_distances(tickers: list[str]) -> pd.DataFrame:
     embeddings = result[0]
     print(f'Dropped companies = {result[1]}')
     valid = result[2]
+
+    # Apply PCA to address curse of dimensionality
+    pca = PCA(n_components=0.99)
+    embeddings = pca.fit_transform(embeddings)
+
+    # Normalize post PCA
+    embeddings = normalize(embeddings)
 
     print('Calculating distances...')
     # Calculate distances between each company using cosine similarity (1-cos(theta))
