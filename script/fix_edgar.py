@@ -1,5 +1,6 @@
 '''Script to fix 10-k issues'''
 # Some companies had TOC false positives or Item1's that were covered in boilerplate, page numbers, links, etc
+# Of the 122 tickers I wanted to replace, only 4 failed, which I filled in manually
 from edgar import *
 import pandas as pd
 import os
@@ -36,18 +37,58 @@ def clean_text(text: str) -> str:
 
 def extract_item1_edgar(ticker: str):
     """
-    Pull latest 10-K and extract Item 1.
+    Pull latest 10-K and extract Item 1 Business.
+    Uses edgartools parsed business section first,
+    then falls back to section lookup.
     """
     try:
-        filing = Company(ticker).get_filings(form='10-K')[0]
-        tenk = filing.obj()
+        filing = Company(ticker).get_filings(form='10-K').latest(1)
 
-        item1 = tenk.sections['part_i_item_1']
-        if item1 is None:
+        if filing is None:
+            return ''
+        tenk = filing.obj()
+        if tenk is None:
             return ''
 
-        return clean_text(item1.text())
+        # Preferred method: parsed Business section
+        try:
+            business = tenk.business
 
+            if business:
+                text = clean_text(str(business))
+
+                if len(text.split()) > 100:
+                    return text
+
+        except Exception:
+            pass
+
+        # Fallback: explicit Item 1 section
+        try:
+            item1 = tenk.sections['part_i_item_1']
+
+            if item1:
+                text = clean_text(item1.text())
+
+                if len(text.split()) > 100:
+                    return text
+
+        except Exception:
+            pass
+
+        # Last fallback: scan sections
+        try:
+            for name, section in tenk.sections.items():
+                if 'business' in name.lower():
+                    text = clean_text(section.text())
+
+                    if len(text.split()) > 100:
+                        return text
+
+        except Exception:
+            pass
+
+        return ''
     except Exception as e:
         print(f'{ticker} failed: {e}')
         return ''
@@ -66,10 +107,10 @@ def repair_item1_cache(tickers):
         item1 = extract_item1_edgar(ticker)
         if item1 == '':
             errors.append(ticker)
-        else:
-            updates.append(
-                {'ticker': ticker, 'item1_text': item1}
-            )
+            print(f'{ticker} failed.')
+        updates.append(
+            {'ticker': ticker, 'item1_text': item1}
+        )
 
     updates = pd.DataFrame(updates)
 
