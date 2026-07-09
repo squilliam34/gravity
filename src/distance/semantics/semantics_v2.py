@@ -480,7 +480,12 @@ def embed_text(descriptions: pd.DataFrame) -> np.ndarray:
 
         new_embeddings = []
         texts = missing['item1_text'].tolist()
-        batch_size = 100
+
+        # Can play with this depending on how mnay tokens/10-k
+        # Max batch size is 100 texts
+        # But you can overwhelm the token limit depending on how long 
+        # Each Item 1 is
+        batch_size = 33
 
         for i in tqdm(
             range(0,len(texts),batch_size),
