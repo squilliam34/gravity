@@ -38,9 +38,8 @@ def extract_item1_edgar(ticker: str):
     """
     Pull latest 10-K and extract Item 1.
     """
-
     try:
-        filing = Company('AAPL').get_filings(form='10-K')[0]
+        filing = Company(ticker).get_filings(form='10-K')[0]
         tenk = filing.obj()
 
         item1 = tenk.sections['part_i_item_1']
