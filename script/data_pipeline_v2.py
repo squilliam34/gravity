@@ -82,10 +82,8 @@ for year in range(2000, date.today().year + 1, 4):
 cluster_path = Path('./data/clusters/clusters.csv')
 
 if cluster_path.exists():
-    print('CLusters already exist...')
-
-    # Read in existing data to construct tickers that had valid 10-ks
-    cluster_df = pd.read_csv('./data/S&P500/semantics_tenk/raw/semantic_distances.csv')
+    print('Clusters already exist...')
+    cluster_df = pd.read_csv('./data/clusters/clusters.csv')
 else:
     print('Clustering stocks...')
 
@@ -137,9 +135,7 @@ else:
     labels = clusterer.labels_
     cluster_df = pd.DataFrame({'ticker': tickers, 'cluster': labels})
 
-    cluster_df.to_csv(
-        './data/S&P500/semantics_tenk/raw/semantic_distances.csv'
-    )
+    cluster_df.to_csv('./data/clusters/clusters.csv')
     print('Clusters saved.')
 
 # Assign Clusters
