@@ -82,6 +82,10 @@ def save_embedding_cache(cache: pd.DataFrame):
     """
     Save embedding cache.
     """
+    cache = cache.drop_duplicates(
+        subset='ticker',
+        keep='last'
+    )
 
     EMBEDDING_CACHE.parent.mkdir(
         parents=True,
