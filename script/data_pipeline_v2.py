@@ -5,7 +5,7 @@ from pathlib import Path
 import warnings
 from tqdm import tqdm
 import logging
-import hdbscan
+from sklearn.cluster import AgglomerativeClustering
 import numpy as np
 
 # Dimensionality reduction imports
@@ -25,7 +25,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 
 ### Change dimensionality reduction model ###
-MODEL = 'umap'
+MODEL = 'spectral'
 
 ########################################
 # PART 1: Import tickers
@@ -38,21 +38,10 @@ tickers.sort()
 # PART 2: Semantic distances
 ########################################
 
-semantic_path = Path('./data/S&P500/semantics_tenk/raw/semantic_distances.csv')
-
-# --- SEMANTIC DISTANCES ---
-if semantic_path.exists():
-    print('Semantic distances already exist...')
-
-    # Read in existing data to construct tickers that had valid 10-ks
-    semantic_df = pd.read_csv('./data/S&P500/semantics_tenk/raw/semantic_distances.csv')
-else:
-    print('Computing semantic distances...')
-    semantic_df = get_semantic_distances(tickers)
-    semantic_df.to_csv(
-        './data/S&P500/semantics_tenk/raw/semantic_distances.csv'
-    )
-    print('Semantic distances saved.')
+# Don't need to check path since cache already handles this
+print('Computing semantic distances...')
+semantic_df = get_semantic_distances(tickers)
+semantic_df.to_csv('./data/S&P500/semantics_tenk/raw/semantic_distances.csv')
 
 ########################################
 # PART 3: Create 4-year intervals
@@ -97,12 +86,13 @@ else:
     )
 
     # Performed a grid search and found that the following parameters worked best
-    n_components = 10
+    # Using silhouette score
+    n_components = 35
     state = 42
-    n_neighbors = 40
+    n_neighbors = 10
 
     if MODEL == 'umap':
-        min_dist = 0
+        min_dist = 0.1
         # UMAP
         reducer = umap.UMAP(
             n_neighbors=n_neighbors, 
@@ -122,13 +112,15 @@ else:
 
     reduced_embeddings = reducer.fit_transform(X)
 
-    # HDBScan
+    # Agglomerative Clustering
 
-    # Grid search found these params to be the best
-    min_cluster_size=10
-    min_samples=5
-
-    clusterer = hdbscan.HDBSCAN(min_cluster_size=5, min_samples=3)
+    # Found these params to work best
+    n_clusters = 40
+    clusterer = AgglomerativeClustering(
+        n_clusters=n_clusters,
+        metric='cosine',
+        linkage='average'
+    )
     clusterer.fit(reduced_embeddings)
 
     # Extract labels (-1 represents noise)
