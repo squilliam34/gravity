@@ -111,7 +111,8 @@ else:
             n_components=n_components, 
             min_dist=min_dist, 
             metric='cosine', 
-            random_state=state
+            random_state=state,
+            n_jobs=1
             )
 
     elif MODEL == 'spectral':
