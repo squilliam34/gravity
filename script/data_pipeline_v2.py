@@ -97,12 +97,14 @@ else:
     X = np.vstack(
         embeddings_df['embedding'].values
     )
-    n_components = 30
+
+    # Performed a grid search and found that the following parameters worked best
+    n_components = 10
     state = 42
+    n_neighbors = 40
 
     if MODEL == 'umap':
-        n_neighbors = 25
-        min_dist = 0.05
+        min_dist = 0
         # UMAP
         reducer = umap.UMAP(
             n_neighbors=n_neighbors, 
@@ -116,13 +118,16 @@ else:
         reducer = SpectralEmbedding(
             n_components=n_components, 
             affinity='nearest_neighbors', 
+            n_neighbors=n_neighbors,
             random_state=state)
 
     reduced_embeddings = reducer.fit_transform(X)
 
     # HDBScan
-    min_cluster_size=5
-    min_samples=3
+
+    # Grid search found these params to be the best
+    min_cluster_size=10
+    min_samples=5
 
     clusterer = hdbscan.HDBSCAN(min_cluster_size=5, min_samples=3)
     clusterer.fit(reduced_embeddings)
