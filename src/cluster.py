@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 import pandas as pd
+from collections.abc import Callable
 
 # Personal modules
 from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
@@ -10,6 +11,9 @@ from src.distance.semantics.semantics_v2 import get_semantic_distances
 
 @dataclass
 class State:
+    """
+    Store the cached data for a cluster over a specific date range.
+    """
     # Date range - used to form the key
     start_date: str
     end_date: str
@@ -23,117 +27,205 @@ class State:
     semantic_distances: object = None
     factor_distances: object = None
     gravity: object = None
-    
-class Cluster:
-    
-    def __init__(self, label:int, tickers:list[str]):
 
+
+class Cluster:
+    """
+    Represent a named group of tickers with cached analysis state.
+    """
+
+    def __init__(self, label: int, tickers: list[str]) -> None:
+        """Initialize a cluster with its label and ticker list.
+
+        Args:
+        label (int): The numeric identifier for the cluster.
+        tickers (list[str]): The stock tickers belonging to the cluster.
+
+        Returns:
+        None
+        """
         self.label = label
         self.tickers = tickers
 
         self.states = {}
 
-    def __str__(self):
-        return f'Cluster {self.label}: {', '.join(self.tickers)}'
+    def __str__(self) -> str:
+        """
+        Return a human-readable description of the cluster.
 
-    def get_tickers(self):
+        Args:
+        None
+
+        Returns:
+        str: A string showing the cluster label and its tickers.
+        """
+        return f"Cluster {self.label}: {', '.join(self.tickers)}"
+
+    def get_tickers(self) -> list[str]:
+        """
+        Return the list of tickers in the cluster.
+
+        Args:
+        None
+
+        Returns:
+        list[str]: The tickers in the cluster.
+        """
         return self.tickers
 
-    def get_state(self, start_date, end_date):
+    def get_state(self, start_date, end_date) -> State:
+        """
+        Retrieve or create the state object for a given date range.
+
+        Args:
+        start_date (str): The start date for the requested state.
+        end_date (str): The end date for the requested state.
+
+        Returns:
+        State: The cached state object for the requested date range.
+        """
         key = (start_date, end_date)
 
         if key not in self.states:
+            # Make the desired directory if it doesn't exist yet
+            path = Path(f'./data/clusters/{self.label}/{start_date}_{end_date}/')
+            path.mkdir(parents=True, exist_ok=True)
+
             self.states[key] = State(
                 start_date=start_date,
                 end_date=end_date,
-                path=Path(f'./data/clusters/{self.label}/{start_date}_{end_date}/')
+                path=path
             )
 
         return self.states[key]
 
-    def get_factor_data(self, start_date, end_date):
+    def _get_data(
+        self,
+        start_date: str,
+        end_date: str,
+        attribute: str,
+        compute_fn: Callable[[], pd.DataFrame],
+        force_recompute: bool = False
+    ) -> pd.DataFrame:
+        """
+        Retrieve data from cache or compute it on demand.
+
+        Args:
+        start_date (str): The start date of the requested data window.
+        end_date (str): The end date of the requested data window.
+        attribute (str): The state attribute to read or write.
+        compute_fn (callable): A function that computes the data when it is not cached.
+        force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
+
+        Returns:
+        pd.DataFrame: The requested data as a DataFrame.
+        """
         state = self.get_state(start_date=start_date, end_date=end_date)
+        path = state.path / f'{attribute}.parquet'
 
-        # Check if the factor data already exists in the state
-        factor_data = state.factor_data
-        if factor_data: return factor_data
+        # Overwrite the existing data
+        if force_recompute:
+            data = compute_fn()
 
+        # Check memory cache
+        elif (data := getattr(state, attribute)) is not None:
+            return data
+
+        # Check disk cache
+        elif path.exists():
+            data = pd.read_parquet(path)
+
+        # Compute from scratch
         else:
-            # Check if it exists in the directory => can be loaded
-            data_dir = state.path / 'factor_data.parquet'
-            if data_dir.exists():
-                factor_data = pd.read_parquet(data_dir)
-                state.factor_data = factor_data
-                return factor_data
+            data = compute_fn()
 
-            else:
-                # Data doesn't exist, so it need to be calculated
-                factor_data = load_factor_data(
-                    tickers=self.tickers,
-                    start_date=start_date,
-                    end_date=end_date
+        # Save and update state
+        data.to_parquet(path)
+        setattr(state, attribute, data)
+        return data
+
+    def get_factor_data(
+        self, 
+        start_date, 
+        end_date, 
+        force_recompute = False
+    ):
+        """
+        Return factor-based distance data for the cluster.
+
+        Args:
+        start_date (str): The start date of the requested window.
+        end_date (str): The end date of the requested window.
+
+        Returns:
+        pd.DataFrame: Factor data for the cluster over the requested window.
+        """
+        return self._get_data(
+            start_date,
+            end_date,
+            attribute='factor_data',
+            compute_fn=lambda: compute_distances(
+                calculate_rolling_betas(
+                    load_factor_data(
+                        tickers=self.tickers,
+                        start_date=start_date,
+                        end_date=end_date,
+                    ), self.tickers
                 )
-                betas = calculate_rolling_betas(
-                    data=factor_data,
-                    tickers=self.tickers
-                )
-                factor_data = compute_distances(
-                    betas=betas
-                )
+            ),
+            force_recompute=force_recompute
+        )
 
-                # Write to directory for future use
-                factor_data.to_parquet(data_dir)
-                state.factor_data = factor_data
-                return factor_data
+    def get_market_caps(
+        self, 
+        start_date, 
+        end_date, 
+        force_recompute = False
+    ):
+        """
+        Return the market capitalization data for the cluster.
 
-    def get_market_caps(self, start_date, end_date):
-        state = self.get_state(start_date=start_date, end_date=end_date)
+        Args:
+        start_date (str): The start date of the requested window.
+        end_date (str): The end date of the requested window.
 
-        # Check if the factor data already exists in the state
-        market_caps = state.market_caps
-        if market_caps: return market_caps
+        Returns:
+        pd.DataFrame: Market cap data for the cluster over the requested window.
+        """
+        return self._get_data(
+            start_date,
+            end_date,
+            attribute='market_caps',
+            compute_fn=lambda: create_market_cap_df(
+                tickers=self.tickers,
+                start_date=start_date,
+                end_date=end_date,
+            ),
+            force_recompute=force_recompute
+        )
 
-        else:
-            # Check if it exists in the directory => can be loaded
-            data_dir = state.path / 'market_caps.parquet'
-            if data_dir.exists():
-                market_caps = pd.read_parquet(data_dir)
-                state.market_caps = market_caps
-                return market_caps
+    def get_semantic_distances(
+        self, 
+        start_date, 
+        end_date, 
+        force_recompute = False
+    ):
+        """
+        Return semantic distance data for the cluster.
 
-            else:
-                # Data doesn't exist, so it need to be calculated
-                market_caps = create_market_cap_df(
-                    tickers=self.tickers,
-                    start_date=start_date,
-                    end_date=end_date
-                )
+        Args:
+        start_date (str): The start date of the requested window.
+        end_date (str): The end date of the requested window.
 
-                # Write to directory for future use
-                market_caps.to_parquet(data_dir)
-                state.market_caps = market_caps
-                return market_caps
-    
-    def get_semantic_distances(self, start_date, end_date):
-        state = self.get_state(start_date=start_date, end_date=end_date)
-
-        # Check if the factor data already exists in the state
-        semantic_distances = state.semantic_distances
-        if semantic_distances: return semantic_distances
-
-        else:
-            # Check if it exists in the directory => can be loaded
-            data_dir = state.path / 'semantic_distances.parquet'
-            if data_dir.exists():
-                semantic_distances = pd.read_parquet(data_dir)
-                state.semantic_distances = semantic_distances
-                return semantic_distances
-
-            else:
-                # Data doesn't exist, so it need to be calculated
-                semantic_distances = get_semantic_distances(self.tickers)
-
-                # Write to directory for future use
-                semantic_distances.to_parquet(data_dir)
-                state.semantic_distances = semantic_distances
-                return semantic_distances
+        Returns:
+        pd.DataFrame: Semantic distance data for the cluster.
+        """
+        return self._get_data(
+            start_date,
+            end_date,
+            attribute='semantic_distances',
+            compute_fn=lambda: get_semantic_distances(
+                self.tickers
+            ),
+            force_recompute=force_recompute
+        )
