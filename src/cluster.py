@@ -156,6 +156,7 @@ class Cluster:
         Args:
         start_date (str): The start date of the requested window.
         end_date (str): The end date of the requested window.
+        force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
 
         Returns:
         pd.DataFrame: Factor data for the cluster over the requested window.
@@ -188,6 +189,7 @@ class Cluster:
         Args:
         start_date (str): The start date of the requested window.
         end_date (str): The end date of the requested window.
+        force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
 
         Returns:
         pd.DataFrame: Market cap data for the cluster over the requested window.
@@ -216,6 +218,7 @@ class Cluster:
         Args:
         start_date (str): The start date of the requested window.
         end_date (str): The end date of the requested window.
+        force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
 
         Returns:
         pd.DataFrame: Semantic distance data for the cluster.
