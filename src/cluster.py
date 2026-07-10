@@ -1,5 +1,5 @@
 '''Cluster class to track stocks and perform analysis'''
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 import pandas as pd
 from collections.abc import Callable
@@ -26,7 +26,8 @@ class State:
     market_caps: object = None
     semantic_distances: object = None
     factor_distances: object = None
-    weight = object = None
+    weights: object = None
+    distances: object = None
     gravity: object = None
 
 
@@ -249,15 +250,194 @@ class Cluster:
         force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
 
         Returns:
-        pd.DataFrame: Vix data to use as weights for distances for the cluster.
+        pd.DataFrame: Vix data transformed to use as weights for distances for the cluster.
         """
         return self._get_data(
             start_date,
             end_date,
-            attribute='semantic_distances',
+            attribute='weights',
             compute_fn=lambda: get_lambda(
                 start_date=start_date,
                 end_date=end_date
             ),
             force_recompute=force_recompute
         )
+
+    def get_distances(
+        self,
+        start_date,
+        end_date,
+        force_recompute=False
+    ):
+        """
+        Return distance data for the cluster.
+
+        Args:
+        start_date (str): The start date of the requested window.
+        end_date (str): The end date of the requested window.
+        force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
+
+        Returns:
+        pd.DataFrame: Semantic distances and factor distances weighted by the weighting scheme.
+        """
+        return self._get_data(
+            start_date,
+            end_date,
+            attribute="distances",
+            compute_fn=lambda: self._calculate_distance(
+                self._prepare_distance_inputs(
+                    weights=self.get_weights(
+                        start_date,
+                        end_date,
+                        force_recompute=force_recompute
+                    ),
+                    factor_distances=self.get_factor_distances(
+                        start_date,
+                        end_date,
+                        force_recompute=force_recompute
+                    ),
+                    semantic_distances=self.get_semantic_distances(
+                        start_date,
+                        end_date,
+                        force_recompute=force_recompute
+                    ),
+                )
+            ),
+            force_recompute=force_recompute
+        )
+
+    def _prepare_distance_inputs(
+        self,
+        weights:pd.DataFrame, 
+        factor_distances:pd.DataFrame, 
+        semantic_distances:pd.DataFrame,
+    ) -> pd.DataFrame:
+        """ 
+        Prepares the data prior to calculating distance.
+
+        Args:
+        weights (pd.DataFrame): The weights to weight each distance metric by.
+        factor_distances (pd.DataFrame): The distance of factors between stocks across time.
+        semantic_distances (pd.DataFrame): The distance in semantic meaning between stocks across time.
+
+        Returns:
+        pd.DataFrame: A DataFrame with all the data combined.
+        """
+        factor_distances = factor_distances.copy()
+        semantic_distances = semantic_distances.copy()
+        market_caps = market_caps.copy()
+        # Convert semantic distance matrix into a MultiIndex for easy alignment
+ 
+        # Mask upper triangle (exclude diagonal + duplicates) 
+        mask = np.triu(np.ones(semantic_distances.shape), k=1).astype(bool) 
+        semantic_distances = ( 
+            semantic_distances.where(mask) 
+                .stack() 
+                .to_frame('semantic distance') 
+        ) 
+        semantic_distances.index.names = ['stock_i', 'stock_j'] 
+
+        # Create a month column for factor data for easy alignment
+        factor_distances['month'] = pd.PeriodIndex(
+            factor_distances['month'],
+            freq='M'
+        )
+        factor_distances.set_index(
+            ['month', 'stock_i', 'stock_j'],
+            inplace=True
+        )
+
+        # Create daily range
+        # start = pd.to_datetime(start_date)
+        # end = pd.to_datetime(end_date)
+
+        # daily_index = pd.date_range(
+        #     start=start,
+        #     end=end,
+        #     freq='D'
+        # )
+        daily_index = weights.index
+
+        # Create master dataframe
+        pairs = pd.MultiIndex.from_product(
+            [
+                daily_index,
+                self.tickers,
+                self.tickers
+            ],
+            names=['date', 'stock_i', 'stock_j']
+        )
+
+        # Remove duplicates
+        pairs = pairs[
+            pairs.get_level_values('stock_i')
+            <
+            pairs.get_level_values('stock_j')
+        ]
+
+        df = pd.DataFrame(index=pairs).reset_index()
+
+        # Join lambda (the weights for )
+        df = df.join(
+            weights,
+            on='date'
+        )
+
+        # Join semantic distances
+        df = df.join(
+            semantic_distances,
+            on=['stock_i', 'stock_j']
+        )
+
+        # Convert date → month
+        df['month'] = df['date'].dt.to_period('M')
+
+        # Join factor distances
+        df = df.join(
+            factor_distances,
+            on=['month', 'stock_i', 'stock_j']
+        )
+
+        df.drop(
+            columns='month',
+            inplace=True
+        )
+
+        df.dropna(
+            subset=['lambda', 'factor distance'],
+            inplace=True
+        )
+        return df
+
+
+    def _calculate_distance(
+        self, 
+        df:pd.DataFrame
+    ) -> pd.DataFrame:
+        """
+        Calculate the final distance metric to be used in gravity calculations.
+
+        Args:
+        df (pd.DataFrame): A DataFrame with the combined factor distances and semantic distances.
+
+        Returns:
+        pd.DataFrame: A DataFrame containing the final distance value.
+        """
+        # Compute final distance
+        df['Distance'] = (
+            df['lambda']*df['factor distance']
+            +
+            (1-df['lambda'])*df['semantic distance']
+        )
+
+        df = df[
+            ['date', 'stock_i', 'stock_j', 'Distance']
+        ]
+
+        df.set_index(
+            ['date', 'stock_i', 'stock_j'],
+            inplace=True
+        )
+
+        df.sort_index(inplace=True)
+        return df
