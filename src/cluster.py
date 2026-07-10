@@ -1,11 +1,21 @@
 '''Cluster class to track stocks and perform analysis'''
 from dataclasses import dataclass, field
+from pathlib import Path
+import pandas as pd
+
+# Personal modules
+from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
 
 @dataclass
-class ClusterState:
+class State:
+    # Date range - used to form the key
     start_date: str
     end_date: str
 
+    # Path to csv directory in project that holds its data
+    path: Path
+
+    # Hold the data
     market_caps: object = None
     factor_data: object = None
     semantic_distances: object = None
@@ -33,9 +43,45 @@ class Cluster:
         key = (start_date, end_date)
 
         if key not in self.states:
-            self.states[key] = ClusterState(
+            self.states[key] = State(
                 start_date=start_date,
-                end_date=end_date
+                end_date=end_date,
+                path=Path(f'./data/clusters/{self.label}/{start_date}_{end_date}/')
             )
 
         return self.states[key]
+
+    def get_factor_data(self, start_date, end_date):
+        state = self.get_state(start_date=start_date, end_date=end_date)
+
+        # Check if the factor data already exists in the state
+        factor_data = state.factor_data
+        if factor_data: return factor_data
+
+        else:
+            # Check if it exists in the directory => can be loaded
+            data_dir = state.path / 'factor_data.parquet'
+            if data_dir.exists():
+                factor_data = pd.read_parquet(data_dir)
+                state.factor_data = factor_data
+                return factor_data
+
+            else:
+                # Data doesn't exist, so it need to be calculated
+                factor_data = load_factor_data(
+                    tickers=self.tickers,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                betas = calculate_rolling_betas(
+                    data=factor_data,
+                    tickers=self.tickers
+                )
+                factor_data = compute_distances(
+                    betas=betas
+                )
+
+                # Write to directory for future use
+                factor_data.to_parquet(data_dir)
+                state.factor_data = factor_data
+                return factor_data
