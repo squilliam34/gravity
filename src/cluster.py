@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import pandas as pd
 from collections.abc import Callable
+import numpy as np
 
 # Personal modules
 from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
@@ -30,6 +31,10 @@ class State:
     distances: object = None
     gravity: object = None
 
+    # Will turn false if there are not enough stocks with
+    # data available for the state
+    valid: bool = True
+    reason: str | None = None
 
 class Cluster:
     """
@@ -140,6 +145,17 @@ class Cluster:
         # Compute from scratch
         else:
             data = compute_fn()
+
+        # Handle failed computation
+        if data.empty:
+            state.valid = False
+            state.reason = f'{attribute} unavailable or insufficient data'
+
+        # Save and update state
+        data.to_parquet(path)
+        setattr(state, attribute, data)
+
+        return data
 
         # Save and update state
         data.to_parquet(path)
@@ -361,6 +377,9 @@ class Cluster:
         Returns:
         pd.DataFrame: A DataFrame with all the data combined.
         """
+        # Check if factor distance was created or not
+        if factor_distances.empty: return pd.DataFrame()
+        
         factor_distances = factor_distances.copy()
         semantic_distances = semantic_distances.copy()
         # Convert semantic distance matrix into a MultiIndex for easy alignment
@@ -374,25 +393,6 @@ class Cluster:
         ) 
         semantic_distances.index.names = ['stock_i', 'stock_j'] 
 
-        # Create a month column for factor data for easy alignment
-        factor_distances['month'] = pd.PeriodIndex(
-            factor_distances['month'],
-            freq='M'
-        )
-        factor_distances.set_index(
-            ['month', 'stock_i', 'stock_j'],
-            inplace=True
-        )
-
-        # Create daily range
-        # start = pd.to_datetime(start_date)
-        # end = pd.to_datetime(end_date)
-
-        # daily_index = pd.date_range(
-        #     start=start,
-        #     end=end,
-        #     freq='D'
-        # )
         daily_index = pd.DatetimeIndex(weights.index)
 
         # Create master dataframe
@@ -460,6 +460,9 @@ class Cluster:
         Returns:
         pd.DataFrame: A DataFrame containing the final distance value.
         """
+        # Check for valid data
+        if df.empty: return pd.DataFrame()
+
         # Compute final distance
         df['Distance'] = (
             df['lambda']*df['factor distance']
@@ -483,6 +486,9 @@ class Cluster:
         """
         Prepare all the data for gravity calculation.
         """ 
+        # Check for valid data
+        if distances.empty: return pd.DataFrame()
+
         market_caps = market_caps.copy()
         distances = distances.copy()
 
@@ -491,6 +497,7 @@ class Cluster:
         market_caps['date'] = pd.to_datetime(market_caps['date']).dt.tz_localize(None)
         market_caps = market_caps.set_index(['date','ticker']).sort_index()
 
+        distances.reset_index(inplace=True)
         distances['date'] = pd.to_datetime(distances['date'])
         distances['date'] = (
             pd.to_datetime(distances['date'])
@@ -549,5 +556,8 @@ class Cluster:
         Returns:
         pd.DataFrame: A DataFrame of gravity values by date and stock.
         """
+        # Check for valid data
+        if df.empty: return pd.DataFrame()
+
         # Gravity calculation
         return (df['mass_product'] / df['Distance']).to_frame(name='Gravity')

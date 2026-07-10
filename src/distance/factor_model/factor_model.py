@@ -137,6 +137,10 @@ def mahalanobis_distance(snapshot: pd.DataFrame,
     Returns:
     pd.DataFrame: A DataFrame containing the Mahalanobis Distance between stocks for the designated period.
     """
+    tickers = snapshot['ticker'].nunique()
+    # Unstable covariance
+    if len(tickers) < 5: return None
+
     X = snapshot[features].values
     cov = np.cov(X, rowvar=False)
     # Add small regularization in case cov is singular
@@ -175,19 +179,40 @@ def compute_distances(betas: pd.DataFrame,
         # Transform distances to scale between 0-1 to align with cosine distance
         # Also helps to compress larger distances that lose economic meaning
         vec = mahalanobis_distance(snapshot, features)
+
+        # There was not enough data for stable covariances
+        if vec is None: continue
+        
         distances = 1 - np.exp(-vec)
         tickers = snapshot['ticker'].values
 
         # Get indices of upper triangle (excluding diagonal)
         triu_idx = np.triu_indices(len(tickers), k=1)
-        results.append(pd.DataFrame({
-            'month': date,
-            'stock_i': tickers[triu_idx[0]],
-            'stock_j': tickers[triu_idx[1]],
-            'factor distance': distances[triu_idx]
-        }))
+        results.append(
+            pd.DataFrame(
+                {
+                    'month': date,
+                    'stock_i': tickers[triu_idx[0]],
+                    'stock_j': tickers[triu_idx[1]],
+                    'factor distance': distances[triu_idx]
+                }
+            )
+        )
 
     results = pd.concat(results, ignore_index=True)
+
+    # Return empty df if there were no valid results
+    if not results:
+        return pd.DataFrame(
+            columns=[
+                'month',
+                'stock_i',
+                'stock_j',
+                'factor distance'
+            ]
+        ).set_index(
+            ['month', 'stock_i', 'stock_j']
+        )
 
     # Convert to multindex 
     return results.set_index(
