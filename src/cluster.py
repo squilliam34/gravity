@@ -5,6 +5,7 @@ import pandas as pd
 
 # Personal modules
 from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
+from src.mass.mass import create_market_cap_df
 
 @dataclass
 class State:
@@ -85,3 +86,31 @@ class Cluster:
                 factor_data.to_parquet(data_dir)
                 state.factor_data = factor_data
                 return factor_data
+
+    def get_market_caps(self, start_date, end_date):
+        state = self.get_state(start_date=start_date, end_date=end_date)
+
+        # Check if the factor data already exists in the state
+        market_caps = state.market_caps
+        if market_caps: return market_caps
+
+        else:
+            # Check if it exists in the directory => can be loaded
+            data_dir = state.path / 'market_caps.parquet'
+            if data_dir.exists():
+                market_caps = pd.read_parquet(data_dir)
+                state.market_caps = market_caps
+                return market_caps
+
+            else:
+                # Data doesn't exist, so it need to be calculated
+                market_caps = create_market_cap_df(
+                    tickers=self.tickers,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+
+                # Write to directory for future use
+                market_caps.to_parquet(data_dir)
+                state.market_caps = market_caps
+                return market_caps
