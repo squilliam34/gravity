@@ -7,6 +7,7 @@ from tqdm import tqdm
 import logging
 from sklearn.cluster import AgglomerativeClustering
 import numpy as np
+import time
 
 # Dimensionality reduction imports
 import umap
@@ -144,6 +145,11 @@ for i in set(cluster_df['cluster']):
 # PART 5: Loop over intervals
 ########################################
 
+# Include a delay and retry loop incase the YFinance API gets overloaded
+# Should work after first try if the API returns an error response
+MAX_RETRIES = 5
+RETRY_DELAY = 1
+
 for start_date, end_date in tqdm(
     intervals,
     desc='Processing intervals',
@@ -156,8 +162,25 @@ for start_date, end_date in tqdm(
         desc='Processing clusters',
         unit='cluster'
     ):
-        cluster.get_gravity(
-            start_date=start_date,
-            end_date=end_date,
-            force_recompute=FORCE_RECOMPUTE
-        )
+
+        for attempt in range(MAX_RETRIES):
+            try:
+                cluster.get_gravity(
+                    start_date=start_date,
+                    end_date=end_date,
+                    force_recompute=FORCE_RECOMPUTE
+                )
+                break  # success
+
+            except Exception as e:
+                if attempt < MAX_RETRIES - 1:
+                    tqdm.write(
+                        f'{cluster.label} failed '
+                        f'({attempt+1}/{MAX_RETRIES}): {e}'
+                    )
+                    time.sleep(RETRY_DELAY)
+
+                else:
+                    tqdm.write(
+                        f'{cluster.label} permanently failed: {e}'
+                    )
