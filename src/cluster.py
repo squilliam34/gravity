@@ -6,6 +6,7 @@ import pandas as pd
 # Personal modules
 from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
 from src.mass.mass import create_market_cap_df
+from src.distance.semantics.semantics_v2 import get_semantic_distances
 
 @dataclass
 class State:
@@ -25,12 +26,10 @@ class State:
     
 class Cluster:
     
-    def __init__(self, label:int, tickers:list[str], embeddings=None):
+    def __init__(self, label:int, tickers:list[str]):
 
         self.label = label
         self.tickers = tickers
-        
-        self.embeddings = embeddings
 
         self.states = {}
 
@@ -114,3 +113,27 @@ class Cluster:
                 market_caps.to_parquet(data_dir)
                 state.market_caps = market_caps
                 return market_caps
+    
+    def get_semantic_distances(self, start_date, end_date):
+        state = self.get_state(start_date=start_date, end_date=end_date)
+
+        # Check if the factor data already exists in the state
+        semantic_distances = state.semantic_distances
+        if semantic_distances: return semantic_distances
+
+        else:
+            # Check if it exists in the directory => can be loaded
+            data_dir = state.path / 'semantic_distances.parquet'
+            if data_dir.exists():
+                semantic_distances = pd.read_parquet(data_dir)
+                state.semantic_distances = semantic_distances
+                return semantic_distances
+
+            else:
+                # Data doesn't exist, so it need to be calculated
+                semantic_distances = get_semantic_distances(self.tickers)
+
+                # Write to directory for future use
+                semantic_distances.to_parquet(data_dir)
+                state.semantic_distances = semantic_distances
+                return semantic_distances
