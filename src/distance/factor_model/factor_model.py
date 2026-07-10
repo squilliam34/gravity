@@ -199,8 +199,6 @@ def compute_distances(betas: pd.DataFrame,
             )
         )
 
-    results = pd.concat(results, ignore_index=True)
-
     # Return empty df if there were no valid results
     if not results:
         return pd.DataFrame(
@@ -213,6 +211,8 @@ def compute_distances(betas: pd.DataFrame,
         ).set_index(
             ['month', 'stock_i', 'stock_j']
         )
+
+    results = pd.concat(results, ignore_index=True)
 
     # Convert to multindex 
     return results.set_index(
