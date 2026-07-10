@@ -8,6 +8,7 @@ from collections.abc import Callable
 from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
 from src.mass.mass import create_market_cap_df
 from src.distance.semantics.semantics_v2 import get_semantic_distances
+from src.distance.distance import get_lambda
 
 @dataclass
 class State:
@@ -23,9 +24,9 @@ class State:
 
     # Hold the data
     market_caps: object = None
-    factor_data: object = None
     semantic_distances: object = None
     factor_distances: object = None
+    weight = object = None
     gravity: object = None
 
 
@@ -144,12 +145,12 @@ class Cluster:
         setattr(state, attribute, data)
         return data
 
-    def get_factor_data(
+    def get_factor_distances(
         self, 
         start_date, 
         end_date, 
         force_recompute = False
-    ):
+    ) -> pd.DataFrame:
         """
         Return factor-based distance data for the cluster.
 
@@ -159,12 +160,12 @@ class Cluster:
         force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
 
         Returns:
-        pd.DataFrame: Factor data for the cluster over the requested window.
+        pd.DataFrame: Factor distance data for the cluster over the requested window.
         """
         return self._get_data(
             start_date,
             end_date,
-            attribute='factor_data',
+            attribute='factor_distances',
             compute_fn=lambda: compute_distances(
                 calculate_rolling_betas(
                     load_factor_data(
@@ -182,7 +183,7 @@ class Cluster:
         start_date, 
         end_date, 
         force_recompute = False
-    ):
+    ) -> pd.DataFrame:
         """
         Return the market capitalization data for the cluster.
 
@@ -211,7 +212,7 @@ class Cluster:
         start_date, 
         end_date, 
         force_recompute = False
-    ):
+    ) -> pd.DataFrame:
         """
         Return semantic distance data for the cluster.
 
@@ -229,6 +230,34 @@ class Cluster:
             attribute='semantic_distances',
             compute_fn=lambda: get_semantic_distances(
                 self.tickers
+            ),
+            force_recompute=force_recompute
+        )
+
+    def get_weights(
+        self,
+        start_date, 
+        end_date, 
+        force_recompute = False
+    ) -> pd.DataFrame:
+        """
+        Return semantic distance data for the cluster.
+
+        Args:
+        start_date (str): The start date of the requested window.
+        end_date (str): The end date of the requested window.
+        force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
+
+        Returns:
+        pd.DataFrame: Vix data to use as weights for distances for the cluster.
+        """
+        return self._get_data(
+            start_date,
+            end_date,
+            attribute='semantic_distances',
+            compute_fn=lambda: get_lambda(
+                start_date=start_date,
+                end_date=end_date
             ),
             force_recompute=force_recompute
         )
