@@ -283,7 +283,7 @@ class Cluster:
         return self._get_data(
             start_date,
             end_date,
-            attribute="distances",
+            attribute='distances',
             compute_fn=lambda: self._calculate_distance(
                 self._prepare_distance_inputs(
                     weights=self.get_weights(
@@ -301,6 +301,44 @@ class Cluster:
                         end_date,
                         force_recompute=force_recompute
                     ),
+                )
+            ),
+            force_recompute=force_recompute
+        )
+
+    def get_gravity(
+        self,
+        start_date,
+        end_date,
+        force_recompute = False
+    ) -> pd.DataFrame:
+        """
+        Return gravity data for the cluster.
+
+        Args:
+        start_date (str): The start date of the requested window.
+        end_date (str): The end date of the requested window.
+        force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
+
+        Returns:
+        pd.DataFrame: The gravity data.
+        """
+        return self._get_data(
+            start_date,
+            end_date,
+            attribute='gravity',
+            compute_fn=lambda: self._calculate_gravity(
+                self._prepare_gravity_inputs(
+                    market_caps=self.get_market_caps(
+                        start_date=start_date,
+                        end_date=end_date,
+                        force_recompute=force_recompute
+                    ),
+                    distances=self.get_distances(
+                        start_date=start_date,
+                        end_date=end_date,
+                        force_recompute=force_recompute
+                    )
                 )
             ),
             force_recompute=force_recompute
@@ -325,7 +363,6 @@ class Cluster:
         """
         factor_distances = factor_distances.copy()
         semantic_distances = semantic_distances.copy()
-        market_caps = market_caps.copy()
         # Convert semantic distance matrix into a MultiIndex for easy alignment
  
         # Mask upper triangle (exclude diagonal + duplicates) 
@@ -356,7 +393,7 @@ class Cluster:
         #     end=end,
         #     freq='D'
         # )
-        daily_index = weights.index
+        daily_index = pd.DatetimeIndex(weights.index)
 
         # Create master dataframe
         pairs = pd.MultiIndex.from_product(
@@ -441,3 +478,76 @@ class Cluster:
 
         df.sort_index(inplace=True)
         return df
+
+    def _prepare_gravity_inputs(self, market_caps, distances): 
+        """
+        Prepare all the data for gravity calculation.
+        """ 
+        market_caps = market_caps.copy()
+        distances = distances.copy()
+
+        # Ensure all data sources have the same index format
+        market_caps = market_caps.reset_index()
+        market_caps['date'] = pd.to_datetime(market_caps['date']).dt.tz_localize(None)
+        market_caps = market_caps.set_index(['date','ticker']).sort_index()
+
+        distances['date'] = pd.to_datetime(distances['date'])
+        distances['date'] = (
+            pd.to_datetime(distances['date'])
+            .dt.tz_localize(None)
+        )
+        distances = distances.set_index(
+            ['date', 'stock_i', 'stock_j']
+        ).sort_index()
+
+        # Ensure market_cap data has the same date range as distance data
+        dates = distances.index.get_level_values('date').unique()
+        market_caps = market_caps.loc[
+            market_caps.index.get_level_values('date').isin(dates)
+        ]
+
+        # Convert market_caps df to multiindex that matches distance data
+        idx = distances.index
+        distances['mass_i'] = (
+            market_caps.reindex(
+                pd.MultiIndex.from_arrays(
+                    [
+                        idx.get_level_values('date'),
+                        idx.get_level_values('stock_i')
+                    ]
+                )
+            )['market_cap']
+            .to_numpy()
+        )
+
+        distances['mass_j'] = (
+            market_caps.reindex(
+                pd.MultiIndex.from_arrays(
+                    [
+                        idx.get_level_values('date'),
+                        idx.get_level_values('stock_j')
+                    ]
+                )
+            )['market_cap']
+            .to_numpy()
+        )
+
+        # Calculate mass products
+        distances['mass_product'] = (
+            distances['mass_i']
+            * distances['mass_j']
+        )
+        return distances
+
+    def _calculate_gravity(self, df:pd.DataFrame) -> pd.Series:
+        """
+        Calculates the gravity value.
+
+        Args:
+        df (pd.DataFrame): A MultiIndex DataFrame containing distance and mass data by date and stock.
+
+        Returns:
+        pd.DataFrame: A DataFrame of gravity values by date and stock.
+        """
+        # Gravity calculation
+        return (df['mass_product'] / df['Distance']).to_frame(name='Gravity')
