@@ -137,7 +137,7 @@ def mahalanobis_distance(snapshot: pd.DataFrame,
     Returns:
     pd.DataFrame: A DataFrame containing the Mahalanobis Distance between stocks for the designated period.
     """
-    tickers = snapshot['ticker'].nunique()
+    tickers = snapshot['ticker'].unique()
     # Unstable covariance
     if len(tickers) < 5: return None
 
@@ -182,7 +182,7 @@ def compute_distances(betas: pd.DataFrame,
 
         # There was not enough data for stable covariances
         if vec is None: continue
-        
+
         distances = 1 - np.exp(-vec)
         tickers = snapshot['ticker'].values
 
