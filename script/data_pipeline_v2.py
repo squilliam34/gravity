@@ -48,12 +48,12 @@ semantic_df = get_semantic_distances(tickers)
 semantic_df.to_csv('./data/S&P500/semantics_tenk/raw/semantic_distances.csv')
 
 ########################################
-# PART 3: Create 4-year intervals
+# PART 3: Create 5-year intervals
 ########################################
 
 intervals = []
 
-for year in range(2000, date.today().year + 1, 4):
+for year in range(2010, date.today().year + 1, 5):
 
     start_date = f'{year}-01-01'
 
