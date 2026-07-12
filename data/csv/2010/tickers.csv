@@ -4,15 +4,11 @@ Abbott Laboratories,ABT
 Abercrombie & Fitch Co. (Class A),ANF
 "Adobe Systems, Inc. *",ADBE
 "Advanced Micro Devices, Inc. *",AMD
-"Aetna, Inc. ",AET
 "AFLAC, Inc. ",AFL
 "Agilent Technologies, Inc. *",A
 "Air Products & Chemicals, Inc. ",APD
-"Airgas, Inc. ",ARG
-AK Steel Holding Corp. ,AKS
 "Akamai Technologies, Inc. *",AKAM
 "Alcoa, Inc. ",AA
-"Allegheny Energy, Inc. ",AYE
 "Allegheny Technologies, Inc. ",ATI
 "Altria Group, Inc. ",MO
 "Amazon.com, Inc. *",AMZN
@@ -42,41 +38,32 @@ Archer-Daniels-Midland Co. ,ADM
 "Autozone, Inc. *",AZO
 "AvalonBay Communities, Inc. ",AVB
 Avery Dennison Corp. ,AVY
-"Avon Products, Inc. ",AVP
-"Baker Hughes, Inc. ",BHI
+"Baker Hughes, Inc. ",BKR
 Ball Corp. ,BALL
 Bank of America Corp. ,BAC
 "Baxter International, Inc. ",BAX
-BB&T Corp. ,BBT
+BB&T Corp. ,TFC
 "Becton, Dickinson & Co. ",BDX
 "Bed Bath & Beyond, Inc. *",BBBY
-"Bemis Co., Inc. ",BMS
 "Berkshire Hathaway, Inc. (Class B) *",BRK-B
 "Best Buy Co., Inc. ",BBY
-"Big Lots, Inc. *",BIG
 "Biogen Idec, Inc. *",BIIB
 BJ Services Co. ,BJS
-"BMC Software, Inc. *",BMC
 "Boston Properties, Inc. ",BXP
 Boston Scientific Corp. *,BSX
 Bristol-Myers Squibb Co. ,BMY
-Broadcom Corp. (Class A),BRCM
 Brown-Forman Corp. (Class B),BF-B
 "C.H. Robinson Worldwide, Inc. ",CHRW
-"C.R. Bard, Inc. ",BCR
-Cameron International Corp. *,CAM
 Campbell Soup Co. ,CPB
 Capital One Financial Corp. ,COF
 "Cardinal Health, Inc. ",CAH
-CareFusion Corp. *,CFN
 Carnival Corp. ,CCL
 "Caterpillar, Inc. ",CAT
 "CB Richard Ellis Group, Inc. (Class A) *",CBRE
 "CenterPoint Energy, Inc. ",CNP
 "CenturyTel, Inc. ",LUMN
-"Cephalon, Inc. *",CEPH
 "CF Industries Holdings, Inc. ",CF
-Chesapeake Energy Corp. ,EKE
+Chesapeake Energy Corp. ,EXE
 Chevron Corp. ,CVX
 Chubb Corp. ,CB
 CIGNA Corp. ,CI
@@ -88,13 +75,11 @@ Cliffs Natural Resources Inc. ,CLF
 Clorox Co. ,CLX
 "CME Group, Inc. ",CME
 CMS Energy Corp. ,CMS
-"Coach, Inc. ",COH
-"Coca-Cola Enterprises, Inc. ",CCE
+"Coach, Inc. ",TPR
 Cognizant Technology Solutions Corp. (Class A) *,CTSH
 Colgate-Palmolive Co. ,CL
 Comcast Corp. (Class A),CMCSA
-Computer Sciences Corp. *,CSC
-Compuware Corp. *,CPWR
+Computer Sciences Corp. *,DXC
 "ConAgra Foods, Inc. ",CAG
 ConocoPhillips,COP
 "CONSOL Energy, Inc. ",CNX
@@ -103,7 +88,6 @@ ConocoPhillips,COP
 "Constellation Energy Group, Inc. ",CEG
 "Corning, Inc. ",GLW
 Costco Wholesale Corp. ,COST
-"Coventry Health Care, Inc. *",CVH
 CSX Corp. ,CSX
 "Cummins, Inc. ",CMI
 CVS Caremark Corp. ,CVS
@@ -111,14 +95,11 @@ CVS Caremark Corp. ,CVS
 Danaher Corp. ,DHR
 "Darden Restaurants, Inc. ",DRI
 "DaVita, Inc. *",DVA
-Dean Foods Co. *,DF
 Deere & Co. ,DE
 "Dell, Inc. *",DELL
-"Denbury Resources, Inc. *",DNR
 "DENTSPLY International, Inc. ",XRAY
 Devon Energy Corp. ,DVN
-"DeVry, Inc. ",DV
-"Discovery Communications, Inc. (Class A) *",DISCA
+"DeVry, Inc. ",CVSA
 "Dominion Resources, Inc. ",D
 Dover Corp. ,DOV
 "Dr. Pepper Snapple Group, Inc. ",KDP
@@ -126,15 +107,13 @@ DTE Energy Co. ,DTE
 Duke Energy Corp. ,DUK
 E. I. du Pont de Nemours & Co. ,DD
 Eastman Chemical Co. ,EMN
-Eastman Kodak Co. *,EK
+Eastman Kodak Co. *,KODK
 Eaton Corp. ,ETN
 "eBay, Inc. *",EBAY
 "Ecolab, Inc. ",ECL
 Edison International,EIX
-El Paso Corp. ,EP
 "Electronic Arts, Inc. *",EA
 Eli Lilly & Co. ,LLY
-EMC Corp. *,EMC
 Emerson Electric Co. ,EMR
 Entergy Corp. ,ETR
 "EOG Resources, Inc. ",EOG
@@ -144,11 +123,9 @@ Equity Residential,EQR
 Exelon Corp. ,EXC
 "Expedia, Inc. ",EXPE
 "Expeditors International of Washington, Inc. ",EXPD
-"Express Scripts, Inc. *",ESRX
 Exxon Mobil Corp. ,XOM
-"Family Dollar Stores, Inc. ",FDO
 Fastenal Co. ,FAST
-"Federated Investors, Inc. (Class B)",IVZ
+"Federated Investors, Inc. (Class B)",FHI
 FedEx Corp. ,FDX
 "Fidelity National Information Services, Inc. ",FIS
 Fifth Third Bancorp,FITB
@@ -161,8 +138,7 @@ Fluor Corp. ,FLR
 FMC Corp. ,FMC
 "FMC Technologies, Inc. *",FTI
 Ford Motor Co. *,F
-"Forest Laboratories, Inc. *",FRX
-"Fortune Brands, Inc. ",FO
+"Fortune Brands, Inc. ",FBIN
 "FPL Group, Inc. ",FPL
 "Franklin Resources, Inc. ",BEN
 "Freeport-McMoRan Copper & Gold, Inc. ",FCX
@@ -173,15 +149,11 @@ General Electric Co. ,GE
 "General Mills, Inc. ",GIS
 Genuine Parts Co. ,GPC
 "Genworth Financial, Inc. (Class A) *",GNW
-Genzyme Corp. *,GENZ
 "Gilead Sciences, Inc. *",GILD
-Goodrich Corp. ,GR
 "Google, Inc. (Class A) *",GOOGL
 "H&R Block, Inc. ",HRB
-H.J. Heinz Co. ,HNZ
 Halliburton Co. ,HAL
 "Harley-Davidson, Inc. ",HOG
-"Harman International Industries, Inc. *",HAR
 Harris Corp. ,LHX
 Hartford Financial Services,HIG
 "Hasbro, Inc. ",HAS
@@ -191,9 +163,7 @@ Hewlett-Packard Co. ,HPQ
 "Home Depot, Inc. ",HD
 "Honeywell International, Inc. ",HON
 Hormel Foods Corp. ,HRL
-"Hospira, Inc. *",HSP
 "Host Hotels & Resorts, Inc. ",HST
-"Hudson City Bancorp, Inc. ",HCBK
 "Humana, Inc. *",HUM
 "Huntington Bancshares, Inc. ",HBAN
 "Illinois Tool Works, Inc. ",ITW
@@ -208,180 +178,129 @@ International Paper Co. ,IP
 "Invesco, Ltd. ",IVZ
 "Iron Mountain, Inc. ",IRM
 ITT Corp. ,ITT
-"J.C. Penney Co., Inc. ",JCP
 "Jabil Circuit, Inc. ",JBL
 "Jacobs Engineering Group, Inc. *",J
-"Janus Capital Group, Inc. ",JNS
-JDS Uniphase Corp. *,JDSU
+JDS Uniphase Corp. *,LITE
 Johnson & Johnson,JNJ
 "Johnson Controls, Inc. ",JCI
 JPMorgan Chase & Co. ,JPM
 KeyCorp,KEY
 Kimberly-Clark Corp. ,KMB
 Kimco Realty Corp. ,KIM
-"King Pharmaceuticals, Inc. *",KG
 KLA-Tencor Corp. ,KLAC
 Kohl’s Corp. *,KSS
-"Kraft Foods, Inc. (Class A)",KFT
-L-3 Communications,MMM
+"Kraft Foods, Inc. (Class A)",KHC
+L-3 Communications,LHX
 Laboratory Corp. of America Holdings *,LH
-"Legg Mason, Inc. ",MAS
 "Leggett & Platt, Inc. ",LEG
 Lennar Corp. (Class A),LEN
-Leucadia National Corp. *,LUK
-"Lexmark International, Inc. (Class A) *",LXK
-Life Technologies Corp. *,LIFE
-"Limited Brands, Inc. ",LB
+Leucadia National Corp. *,JEF
+"Limited Brands, Inc. ",BBWI
 Lincoln National Corp. ,LNC
-Linear Technology Corp. ,LLTC
 Lockheed Martin Corp. ,LMT
 Loews Corp. ,L
 "Lowe’s Cos., Inc. ",LOW
-LSI Corp. *,LSI
 M & T Bank Corp. ,MTB
 "Macy’s, Inc. ",M
 "Marriott International, Inc. (Class A)",MAR
 "Marsh & McLennan Cos., Inc. ",MRSH
-Marshall & Ilsley Corp. ,MI
 Masco Corp. ,MAS
-Massey Energy Co. ,MAS
 "MasterCard, Inc. (Class A)",MA
 "Mattel, Inc. ",MAT
-"McAfee, Inc. *",MFE
 "McCormick & Co., Inc. ",MKC
 McDonald’s Corp. ,MCD
 McKesson Corp. ,MCK
-Mead Johnson Nutrition Co. ,MJN
-MeadWestvaco Corp. ,MWV
-"Medco Health Solutions, Inc. *",MHS
+MeadWestvaco Corp. ,SW
 "Medtronic, Inc. ",MDT
-"MEMC Electronic Materials, Inc. *",EMC
 "Merck & Co., Inc. ",MRK
-Meredith Corp. ,MDP
 "MetLife, Inc. ",MET
 "Microchip Technology, Inc. ",MCHP
 "Micron Technology, Inc. *",MU
 Microsoft Corp. ,MSFT
-Millipore Corp. *,MIL
-"Molex, Inc. ",MOLX
 Molson Coors Brewing Co. (Class B),TAP
-"Monster Worldwide, Inc. *",MWW
 Moody’s Corp. ,MCO
 Morgan Stanley,MS
-"Motorola, Inc. *",MOT
+"Motorola, Inc. *",MSI
 Murphy Oil Corp. ,MUR
 "Nabors Industries, Ltd. *",NBR
-National Semiconductor Corp. ,NSM
 "National-Oilwell Varco, Inc. ",NOV
 "NetApp, Inc. *",NTAP
 "Newell Rubbermaid, Inc. ",NWL
 Newmont Mining Corp. ,NEM
 News Corp. (Class A),NWSA
-"Nicor, Inc. ",GAS
 "NIKE, Inc. (Class B)",NKE
 "NiSource, Inc. ",NI
 Norfolk Southern Corp. ,NSC
 Northeast Utilities,NU
 Northern Trust Corp. ,NTRS
 Northrop Grumman Corp. ,NOC
-"Novell, Inc. *",NOVL
-"Novellus Systems, Inc. *",NVLS
 "NRG Energy, Inc. *",NRG
 Nucor Corp. ,NUE
 NVIDIA Corp. *,NVDA
-NYSE Euronext,NYX
+NYSE Euronext,ENX
 "O’Reilly Automotive, Inc. *",ORLY
 Occidental Petroleum Corp. ,OXY
-"Office Depot, Inc. *",ODP
 "Omnicom Group, Inc. ",OMC
 "Oneok, Inc. ",OKE
 Oracle Corp. ,ORCL
 "Owens-Illinois, Inc. *",OI
 "PACCAR, Inc. ",PCAR
-Pactiv Corp. *,PTV
 Parker-Hannifin Corp. ,PH
 "Paychex, Inc. ",PAYX
 Peabody Energy Corp. ,BTU
-"Pepco Holdings, Inc. ",POM
 "PepsiCo, Inc. ",PEP
 "Pfizer, Inc. ",PFE
 PG&E Corp. ,PCG
 "Philip Morris International, Inc. ",PM
 Pinnacle West Capital Corp. ,PNW
 "Pitney Bowes, Inc. ",PBI
-"Plum Creek Timber Co., Inc. ",PCL
 PNC Financial Services,PNC
 Polo Ralph Lauren Corp. ,RL
 "PPG Industries, Inc. ",PPG
 PPL Corp. ,PPL
 "Praxair, Inc. ",LIN
-Precision Castparts Corp. ,PCP
-"priceline.com, Inc. *",PCLN
+"priceline.com, Inc. *",BKNG
 "Principal Financial Group, Inc. ",PFG
-"Progress Energy, Inc. ",PGN
 ProLogis,PLD
 "Prudential Financial, Inc. ",PRU
 "Public Service Enterprise Group, Inc. ",PEG
 "Public Storage, Inc. ",PSA
 "PulteGroup, Inc. *",PHM
-QLogic Corp. *,QLGC
 "QUALCOMM, Inc. ",QCOM
 "Quanta Services, Inc. *",PWR
 "Quest Diagnostics, Inc. ",DGX
-Questar Corp. ,STR
-"Qwest Communications International, Inc. ",Q
-R.R. Donnelley & Sons Co. ,RRD
-RadioShack Corp. ,RSH
 Range Resources Corp. ,RRC
 Raytheon Co. ,RTX
 Regions Financial Corp. ,RF
 "Republic Services, Inc. ",RSG
 "Robert Half International, Inc. ",RHI
 "Rockwell Automation, Inc. ",ROK
-"Rockwell Collins, Inc. ",COL
 "Roper Industries, Inc. ",ROP
 "Ross Stores, Inc. ",ROST
-"Rowan Cos., Inc. *",RDC
-"Ryder System, Inc. ",SYY
-"Safeway, Inc. ",SWY
-"SAIC, Inc. *",MOS
+"Rowan Cos., Inc. *",VAL
+"SAIC, Inc. *",SAIC
 "Salesforce.com, Inc. *",CRM
 SanDisk Corp. *,SNDK
-Sara Lee Corp. ,SLE
-SCANA Corp. ,SCG
 "Schlumberger, Ltd. ",SLB
-Sears Holdings Corp. *,SHLD
 Sempra Energy,SRE
 Sherwin-Williams Co. ,SHW
-Sigma-Aldrich Corp. ,SIAL
 "Simon Property Group, Inc. ",SPG
 SLM Corp. *,SLM
-"Smith International, Inc. ",SII
 "Snap-on, Inc. ",SNA
 Southern Co. ,SO
 Southwest Airlines Co. ,LUV
-Spectra Energy Corp. ,SE
-Sprint Nextel Corp. *,S
-"St. Jude Medical, Inc. *",STJ
 Stanley Black & Decker Inc. ,SWK
-"Staples, Inc. ",SPLS
 Starbucks Corp. *,SBUX
-"Starwood Hotels & Resorts Worldwide, Inc. ",HOT
 State Street Corp. (a),STT
 Stryker Corp. ,SYK
 "Sunoco, Inc. ",SUN
-"SunTrust Banks, Inc. ",STI
-"SUPERVALU, Inc. ",SVU
 Symantec Corp. *,GEN
 Sysco Corp. ,SYY
 "T. Rowe Price Group, Inc. ",TROW
 Target Corp. ,TGT
-"TECO Energy, Inc. ",TE
-"Tellabs, Inc. ",TLAB
 Tenet Healthcare Corp. *,THC
 Teradata Corp. *,TDC
 "Teradyne, Inc. *",TER
-Tesoro Corp. ,TSO
 "Texas Instruments, Inc. ",TXN
 "Textron, Inc. ",TXT
 The AES Corp. *,AES
@@ -391,31 +310,28 @@ The Boeing Co. ,BA
 The Charles Schwab Corp. ,SCHW
 "The Estee Lauder Cos., Inc. (Class A)",EL
 "The Gap, Inc. ",GAP
-"The Goldman Sachs Group, Inc. ",COH
+"The Goldman Sachs Group, Inc. ",TPR
 The Goodyear Tire & Rubber Co. *,GT
 The Hershey Co. ,HSY
 The J.M. Smucker Co. ,SJM
 The Kroger Co. ,KR
-"The McGraw-Hill Cos., Inc. ",EMC
+"The McGraw-Hill Cos., Inc. ",MH
 "The NASDAQ OMX Group, Inc. *",NDAQ
 The New York Times Co. (Class A) *,NYT
 The Procter & Gamble Co. ,PG
 The Progressive Corp. ,PGR
 "The Travelers Cos., Inc. ",TRV
 The Walt Disney Co. ,DIS
-The Washington Post Co. (Class B),WPO
+The Washington Post Co. (Class B),GHC
 The Western Union Co. ,WU
 "The Williams Cos., Inc. ",WMB
 "Thermo Fisher Scientific, Inc. *",TMO
-"Time Warner, Inc. ",TWX
-Titanium Metals Corp. *,TIE
 "TJX Cos., Inc. ",TJX
 Torchmark Corp. ,GL
 "Tyson Foods, Inc. (Class A)",TSN
 U.S. Bancorp,USB
 Union Pacific Corp. ,UNP
 "United Parcel Service, Inc. (Class B)",UPS
-United States Steel Corp. ,X
 "UnitedHealth Group, Inc. ",UNH
 Unum Group,UNM
 "Urban Outfitters, Inc. *",URBN
@@ -424,7 +340,7 @@ Valero Energy Corp. ,VLO
 "Ventas, Inc. ",VTR
 "VeriSign, Inc. *",VRSN
 "Verizon Communications, Inc. ",VZ
-"Viacom, Inc. (Class B) *",VIA.B
+"Viacom, Inc. (Class B) *",PSKY
 "Visa, Inc. ",V
 Vornado Realty Trust,VNO
 Vulcan Materials Co. ,VMC
@@ -432,7 +348,7 @@ Vulcan Materials Co. ,VMC
 "Wal-Mart Stores, Inc. ",WMT
 "Waste Management, Inc. ",WM
 Waters Corp. *,WAT
-"WellPoint, Inc. *",WLP
+"WellPoint, Inc. *",ELV
 Wells Fargo & Co. ,WFC
 Western Digital Corp. *,WDC
 Weyerhaeuser Co. ,WY
@@ -443,7 +359,6 @@ Wyndham Worldwide Corp. ,WH
 "Wynn Resorts, Ltd. ",WYNN
 "Xcel Energy, Inc. ",XEL
 Xerox Corp. ,XRX
-"XTO Energy, Inc. ",XTO
 "Yum! Brands, Inc. ",YUM
-"Zimmer Holdings, Inc. *",ZMH
+"Zimmer Holdings, Inc. *",ZBH
 Zions Bancorporation,ZION
