@@ -11,6 +11,9 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 import sys
 
+# Import cik retrieval function
+from src.distance.semantics.semantics_v2 import build_cik_dict, retrieve_item1_batch
+
 if len(sys.argv) < 2:
     print('Error: Please provide a year.')
     sys.exit(1)
@@ -49,7 +52,7 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
-def extract_item1_edgar(ticker: str, year: str=YEAR):
+def extract_item1_edgar(ticker: str, cik:str, year: str=YEAR):
     """
     Pull latest 10-K and extract Item 1 Business.
     Uses edgartools parsed business section first,
@@ -57,10 +60,10 @@ def extract_item1_edgar(ticker: str, year: str=YEAR):
     """
     try:
         i = 2026 - int(year)
-        filing = Company(ticker).get_filings(form='10-K')[i]
+        filing = Company(cik).get_filings(form='10-K')[i]
 
         # Ensure that the year is correct
-        if filing.filing_date.year > int(YEAR):
+        if filing.filing_date.year > int(year):
             return ''
 
         if filing is None:
@@ -112,7 +115,7 @@ def extract_item1_edgar(ticker: str, year: str=YEAR):
         print(f'{ticker} failed: {e}')
         return ''
 
-def repair_item1_cache(tickers: list[str], year: str = YEAR):
+def repair_item1_cache(cik_dict:dict[str, str], year: str = YEAR):
 
     # Load existing cache
     if os.path.exists(CACHE_PATH):
@@ -131,7 +134,7 @@ def repair_item1_cache(tickers: list[str], year: str = YEAR):
     errors = []
     processed = 0
 
-    for ticker in tqdm(tickers):
+    for ticker, cik in tqdm(cik_dict.items()):
 
         # Skip tickers that already have a repaired Item 1
         if ticker in cache.index:
@@ -139,8 +142,8 @@ def repair_item1_cache(tickers: list[str], year: str = YEAR):
 
             if isinstance(existing, str) and existing.strip():
                 continue
-
-        item1 = extract_item1_edgar(ticker)
+        
+        item1 = extract_item1_edgar(ticker=ticker, cik=cik, year=year)
 
         if item1 == '':
             errors.append(ticker)
@@ -164,7 +167,21 @@ def repair_item1_cache(tickers: list[str], year: str = YEAR):
     print(f'Processed {processed} companies.')
     print(f'Failed {len(errors)} tickers: {errors}')
 
+    return errors
+
 tickers_df = pd.read_csv(f'./data/csv/{YEAR}/tickers.csv')
 tickers = tickers_df['Ticker'].to_list()
+cik_dict = build_cik_dict(tickers)
 
-repair_item1_cache(tickers, YEAR)
+print('Retrieving Item 1\'s using EdgarTools.')
+errors = repair_item1_cache(cik_dict=cik_dict, year=YEAR)
+
+# Try retrieving failed tickers using regex
+failed_dict = {
+    ticker: cik
+    for ticker, cik in cik_dict.items()
+    if ticker in errors
+}
+
+print('Retrieving Item 1\'s using RegEx.')
+regex_results = retrieve_item1_batch(failed_dict, year=YEAR)
