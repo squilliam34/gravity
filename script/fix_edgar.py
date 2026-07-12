@@ -9,14 +9,26 @@ import os
 import re
 from tqdm import tqdm
 from dotenv import load_dotenv
+import sys
+
+if len(sys.argv) < 2:
+    print('Error: Please provide a year.')
+    sys.exit(1)
+
+VALID_YEARS = {'2010', '2015', '2020', '2025'}
+
+YEAR = sys.argv[1]
+
+if YEAR not in VALID_YEARS:
+    print(f'Error: YEAR must be one of {sorted(VALID_YEARS)}')
+    sys.exit(1)
+
+CACHE_PATH = f'./data/cache/descriptions/{YEAR}/item1_cache.parquet'
 
 load_dotenv()
 EMAIL = os.getenv('EMAIL')
 
 set_identity(EMAIL)
-
-CACHE_PATH = './data/cache/descriptions/item1_cache.parquet'
-
 
 def clean_text(text: str) -> str:
     """
@@ -37,14 +49,19 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
-def extract_item1_edgar(ticker: str):
+def extract_item1_edgar(ticker: str, year: str=YEAR):
     """
     Pull latest 10-K and extract Item 1 Business.
     Uses edgartools parsed business section first,
     then falls back to section lookup.
     """
     try:
-        filing = Company(ticker).get_filings(form='10-K').latest(1)
+        i = 2026 - int(year)
+        filing = Company(ticker).get_filings(form='10-K')[i]
+
+        # Ensure that the year is correct
+        if filing.filing_date.year > int(YEAR):
+            return ''
 
         if filing is None:
             return ''
@@ -95,17 +112,26 @@ def extract_item1_edgar(ticker: str):
         print(f'{ticker} failed: {e}')
         return ''
 
-def repair_item1_cache(tickers):
+def repair_item1_cache(tickers:list[str], year:str=YEAR):
 
     if os.path.exists(CACHE_PATH):
         cache = pd.read_parquet(CACHE_PATH)
     else:
-        cache = pd.DataFrame(columns=['ticker','item1'])
+        cache = pd.DataFrame(columns=['ticker','item1_text'])
 
     updates = []
     errors = []
 
     for ticker in tqdm(tickers):
+        cached = cache.loc[
+            cache.ticker == ticker,
+            'item1_text'
+        ]
+
+        # Already repaired
+        if not cached.empty and cached.iloc[0].strip():
+            continue
+
         item1 = extract_item1_edgar(ticker)
         if item1 == '':
             errors.append(ticker)
@@ -118,14 +144,24 @@ def repair_item1_cache(tickers):
 
     if not updates.empty:
         # Replace only repaired tickers
-        cache = cache[~cache.ticker.isin(tickers)]
-        cache = pd.concat([cache, updates], ignore_index=True)
+        cache = pd.concat(
+            [cache, updates],
+            ignore_index=True
+        )
+
+        cache = cache.drop_duplicates(
+            subset='ticker',
+            keep='last'
+        )
+
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
         cache.to_parquet(CACHE_PATH, index=False)
 
     print(f'Updated {len(updates)} tickers.')
     print(f'Failed {len(errors)} tickers: {errors}')
 
+tickers_df = pd.read_csv(f'./data/csv/{YEAR}/tickers.csv')
+tickers = tickers_df['Ticker'].to_list()
 
-bad_tickers = ['ALB', 'BG', 'DLTR', 'ECHO', 'EXPE', 'KKR', 'MPC', 'NTAP', 'TFC', 'HIG']
-
-repair_item1_cache(bad_tickers)
+repair_item1_cache(tickers, YEAR)
