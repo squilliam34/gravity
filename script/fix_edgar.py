@@ -112,53 +112,56 @@ def extract_item1_edgar(ticker: str, year: str=YEAR):
         print(f'{ticker} failed: {e}')
         return ''
 
-def repair_item1_cache(tickers:list[str], year:str=YEAR):
+def repair_item1_cache(tickers: list[str], year: str = YEAR):
 
+    # Load existing cache
     if os.path.exists(CACHE_PATH):
         cache = pd.read_parquet(CACHE_PATH)
-    else:
-        cache = pd.DataFrame(columns=['ticker','item1_text'])
 
-    updates = []
+        # Ensure expected columns exist
+        if 'ticker' not in cache.columns:
+            cache = cache.reset_index()
+
+    else:
+        cache = pd.DataFrame(columns=['ticker', 'item1_text'])
+
+    # Use ticker as index for fast updates
+    cache = cache.set_index('ticker')
+
     errors = []
+    processed = 0
 
     for ticker in tqdm(tickers):
-        cached = cache.loc[
-            cache.ticker == ticker,
-            'item1_text'
-        ]
 
-        # Already repaired
-        if not cached.empty and cached.iloc[0].strip():
-            continue
+        # Skip tickers that already have a repaired Item 1
+        if ticker in cache.index:
+            existing = cache.loc[ticker, 'item1_text']
+
+            if isinstance(existing, str) and existing.strip():
+                continue
 
         item1 = extract_item1_edgar(ticker)
+
         if item1 == '':
             errors.append(ticker)
             print(f'{ticker} failed.')
-        updates.append(
-            {'ticker': ticker, 'item1_text': item1}
-        )
 
-    updates = pd.DataFrame(updates)
+        # Update cache in-place
+        cache.loc[ticker] = item1
 
-    if not updates.empty:
-        # Replace only repaired tickers
-        cache = pd.concat(
-            [cache, updates],
-            ignore_index=True
-        )
+        processed += 1
 
-        cache = cache.drop_duplicates(
-            subset='ticker',
-            keep='last'
-        )
+        # Checkpoint every 25 processed companies
+        if processed % 25 == 0:
+            os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+            cache.reset_index().to_parquet(CACHE_PATH, index=False)
+            print(f'Checkpoint saved ({processed} companies processed).')
 
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
-        cache.to_parquet(CACHE_PATH, index=False)
+    # Final save
+    os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+    cache.reset_index().to_parquet(CACHE_PATH, index=False)
 
-    print(f'Updated {len(updates)} tickers.')
+    print(f'Processed {processed} companies.')
     print(f'Failed {len(errors)} tickers: {errors}')
 
 tickers_df = pd.read_csv(f'./data/csv/{YEAR}/tickers.csv')
