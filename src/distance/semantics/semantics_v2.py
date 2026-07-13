@@ -156,32 +156,58 @@ def get_tenk(
     Returns:
     str: A string of the 10-k filing.
     """
+    year = int(year)
+
     submissions_url = f'https://data.sec.gov/submissions/CIK{cik}.json'
     submissions = requests.get(
         submissions_url,
         headers=headers
     ).json()
-    recent = pd.DataFrame(submissions['filings']['recent'])
-    # Find the indexes of all 10-K filings
 
-    tenk = recent[recent['form'] == '10-K'].copy()
+    # Start with recent filings
+    tenk = pd.DataFrame(submissions['filings']['recent'])
+    tenk = tenk[tenk['form'] == '10-K'].copy()
 
     tenk['filingDate'] = pd.to_datetime(tenk['filingDate'])
     tenk['year'] = tenk['filingDate'].dt.year
 
     filing = tenk.loc[tenk['year'] == year]
+
+    # If not found, search historical filing indexes
+    if filing.empty:
+
+        for file in submissions['filings']['files']:
+
+            older = requests.get(
+                f"https://data.sec.gov/submissions/{file['name']}",
+                headers=headers
+            ).json()
+
+            df = pd.DataFrame(older)
+
+            df = df[df['form'] == '10-K'].copy()
+
+            df['filingDate'] = pd.to_datetime(df['filingDate'])
+            df['year'] = df['filingDate'].dt.year
+
+            filing = df.loc[df['year'] == year]
+
+            if not filing.empty:
+                break
+
     if filing.empty:
         raise ValueError(f'No 10-K found for {year}')
+
     filing = filing.iloc[0]
 
     accession = filing['accessionNumber'].replace('-', '')
+
     url = (
         f'https://www.sec.gov/Archives/edgar/data/'
-        f'{int(cik)}/{accession}/{filing['primaryDocument']}'
+        f'{int(cik)}/{accession}/{filing["primaryDocument"]}'
     )
 
-    html = requests.get(url, headers=headers).text
-    return html
+    return requests.get(url, headers=headers).text
 
 def html_to_text(html: str) -> str:
     """
@@ -354,7 +380,7 @@ def retrieve_item1_batch(cik_dict: dict, year:str) -> pd.DataFrame:
         )
 
     descriptions = {}
-
+    errors = []
     for ticker, cik in tqdm(cik_dict.items(), desc='Extracting Item 1'):
 
         ticker = ticker.strip()
@@ -365,7 +391,11 @@ def retrieve_item1_batch(cik_dict: dict, year:str) -> pd.DataFrame:
             'item1_text'
         ]
 
-        if not cached.empty:
+        if (
+            not cached.empty
+            and isinstance(cached.iloc[0], str)
+            and cached.iloc[0].strip()
+        ):
             descriptions[ticker] = cached.iloc[0]
             continue
 
@@ -390,6 +420,7 @@ def retrieve_item1_batch(cik_dict: dict, year:str) -> pd.DataFrame:
         except Exception as e:
             descriptions[ticker] = None
             print(f'\nFailed {ticker}: {e}')
+            errors.append(ticker)
 
     # Save updated cache
     item1_cache.parent.mkdir(
@@ -405,6 +436,7 @@ def retrieve_item1_batch(cik_dict: dict, year:str) -> pd.DataFrame:
         index=False
     )
 
+    print(f'Errors: {errors}')
     return pd.DataFrame(descriptions.items(), columns=['ticker', 'item1_text'])
 
 def normalize(array: np.ndarray) -> np.ndarray:
