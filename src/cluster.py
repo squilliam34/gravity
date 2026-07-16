@@ -246,7 +246,8 @@ class Cluster:
             end_date,
             attribute='semantic_distances',
             compute_fn=lambda: get_semantic_distances(
-                self.tickers
+                tickers=self.tickers,
+                year=start_date[:4]
             ),
             force_recompute=force_recompute
         )

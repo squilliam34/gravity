@@ -531,7 +531,7 @@ def embed_text(descriptions: pd.DataFrame, year:str) -> np.ndarray:
         # Max batch size is 100 texts
         # But you can overwhelm the token limit depending on how long 
         # Each Item 1 is
-        batch_size = 33
+        batch_size = 20
 
         for i in tqdm(
             range(0,len(texts),batch_size),
