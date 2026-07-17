@@ -29,53 +29,7 @@ logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 ### Recompute existing gravity? ###
 FORCE_RECOMPUTE = False
 
-def build_clusters(year):
-
-    cluster_path = Path(f'./data/clusters/{year}/clusters.csv')
-    cluster_path.parent.mkdir(parents=True, exist_ok=True)
-
-    if cluster_path.exists():
-        return pd.read_csv(cluster_path)
-
-    embeddings_df = pd.read_parquet(
-        f'./data/cache/embeddings/{year}/gemini_item1_raw_cache.parquet'
-    ).sort_values('ticker')
-
-    tickers = embeddings_df['ticker'].tolist()
-
-    X = np.vstack(embeddings_df['embedding'])
-
-    X = umap.UMAP(
-        n_neighbors=15,
-        min_dist=0.0,
-        n_components=10,
-        metric='cosine',
-        random_state=42,
-        n_jobs=1
-    ).fit_transform(X)
-
-    clusterer = hdbscan.HDBSCAN(
-        min_cluster_size=5,
-        min_samples=1,
-        prediction_data=True,
-    )
-
-    clusterer.fit(X)
-
-    P = hdbscan.all_points_membership_vectors(clusterer)
-
-    labels = P.argmax(axis=1)
-
-    cluster_df = pd.DataFrame({
-        'ticker': tickers,
-        'cluster': labels
-    })
-
-    cluster_df.to_csv(cluster_path, index=False)
-    return cluster_df
-
 intervals = []
-
 for year in range(2010, date.today().year + 1, 5):
 
     start_date = f'{year}-01-01'
@@ -85,9 +39,7 @@ for year in range(2010, date.today().year + 1, 5):
     else:
         end_date = date.today().strftime('%Y-%m-%d')
 
-    intervals.append(
-        (start_date, end_date)
-    )
+    intervals.append((start_date, end_date))
 
 # Include a delay and retry loop incase the YFinance API gets overloaded
 # Should work after first try if the API returns an error response
@@ -103,6 +55,10 @@ for start_date, end_date in tqdm(
 
     year = start_date[:4]
     
+    ############################
+    ## Ensure embeddings exist
+    ############################
+
     # Call tickers by year
     tickers_csv = pd.read_csv(f'./data/csv/{year}/tickers.csv')
     tickers = tickers_csv['Ticker'].to_list()
@@ -111,8 +67,50 @@ for start_date, end_date in tqdm(
     # Don't need to check path since cache already handles this
     print(f'Computing semantic distances for {year}...')
     semantic_df = get_semantic_distances(tickers, year)
+
+    ############################
+    ## Build Clusters
+    ############################
+    cluster_path = Path(f'./data/clusters/{year}/clusters.csv')
+    cluster_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if cluster_path.exists():
+        cluster_df = pd.read_csv(cluster_path)
     
-    cluster_df = build_clusters(year)
+    else:
+        embeddings_df = pd.read_parquet(
+            f'./data/cache/embeddings/{year}/gemini_item1_raw_cache.parquet'
+        ).sort_values('ticker')
+
+        tickers = embeddings_df['ticker'].tolist()
+        X = np.vstack(embeddings_df['embedding'])
+
+        # I chose UMAP to enforce additional separation between clusters
+        X = umap.UMAP(
+            n_neighbors=15,
+            min_dist=0.0,
+            n_components=10,
+            metric='cosine',
+            random_state=42,
+            n_jobs=1
+        ).fit_transform(X)
+
+        clusterer = hdbscan.HDBSCAN(
+            min_cluster_size=5,
+            min_samples=1,
+            prediction_data=True,
+        )
+
+        # Since HDBScan labels points as noise,
+        # make use of soft probabalities to ensure
+        # each point gets clustered
+        clusterer.fit(X)
+        P = hdbscan.all_points_membership_vectors(clusterer)
+        labels = P.argmax(axis=1)
+
+        cluster_df = pd.DataFrame({'ticker': tickers, 'cluster': labels})
+        cluster_df.to_csv(cluster_path, index=False)
+    
     clusters = []
     for label, group in cluster_df.groupby('cluster'):
 
@@ -122,6 +120,10 @@ for start_date, end_date in tqdm(
                 tickers=group['ticker'].tolist()
             )
         )
+
+    ############################
+    ## Process each cluster
+    ############################
 
     for cluster in tqdm(
         clusters,
@@ -140,12 +142,8 @@ for start_date, end_date in tqdm(
 
             except Exception as e:
                 if attempt < MAX_RETRIES - 1:
-                    tqdm.write(
-                        f'{cluster.label} failed '
-                        f'({attempt+1}/{MAX_RETRIES}): {e}'
-                    )
+                    tqdm.write(f'{cluster.label} failed ({attempt+1}/{MAX_RETRIES}): {e}')
                     time.sleep(RETRY_DELAY)
-
                 else:
                     tqdm.write(
                         f'{cluster.label} permanently failed: {e}'
