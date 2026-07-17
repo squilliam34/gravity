@@ -6,7 +6,11 @@ from collections.abc import Callable
 import numpy as np
 
 # Personal modules
-from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
+from src.distance.factor_model.factor_model import (
+    load_factor_data, 
+    calculate_rolling_betas, 
+    compute_distances
+s)
 from src.mass.mass import create_market_cap_df
 from src.distance.semantics.semantics_v2 import get_semantic_distances
 from src.distance.distance import get_lambda
@@ -95,7 +99,7 @@ class Cluster:
 
         if key not in self.states:
             # Make the desired directory if it doesn't exist yet
-            path = Path(f'./data/clusters/{self.label}/{start_date}_{end_date}/')
+            path = Path(f'./data/clusters/{start_date}_{end_date}/{self.label}/')
             path.mkdir(parents=True, exist_ok=True)
 
             self.states[key] = State(
