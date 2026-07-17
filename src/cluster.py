@@ -10,7 +10,7 @@ from src.distance.factor_model.factor_model import (
     load_factor_data, 
     calculate_rolling_betas, 
     compute_distances
-s)
+)
 from src.mass.mass import create_market_cap_df
 from src.distance.semantics.semantics_v2 import get_semantic_distances
 from src.distance.distance import get_lambda
