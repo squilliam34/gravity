@@ -5,18 +5,19 @@ from pathlib import Path
 import warnings
 from tqdm import tqdm
 import logging
-from sklearn.cluster import AgglomerativeClustering
 import numpy as np
 import time
-
-# Dimensionality reduction imports
-import umap
-from sklearn.manifold import SpectralEmbedding
+import hdbscan
+import umap.umap_ as umap
 
 # Personal modules
 from data.data_loader import get_tickers
 from src.distance.semantics.semantics_v2 import get_semantic_distances
-from src.distance.factor_model.factor_model import load_factor_data, calculate_rolling_betas, compute_distances
+from src.distance.factor_model.factor_model import (
+    load_factor_data, 
+    calculate_rolling_betas, 
+    compute_distances
+)
 from src.mass.mass import create_market_cap_df
 from src.cluster import Cluster
 print('Finished imports')
@@ -25,30 +26,56 @@ print('Finished imports')
 warnings.simplefilter(action='ignore', category=FutureWarning)
 logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 
-### Change dimensionality reduction model ###
-MODEL = 'spectral'
-
 ### Recompute existing gravity? ###
 FORCE_RECOMPUTE = False
 
-########################################
-# PART 1: Import tickers
-########################################
+def build_clusters(year):
 
-tickers = get_tickers('./data/csv/SP500.xlsx')
-tickers.sort()
+    cluster_path = Path(f'./data/clusters/{year}/clusters.csv')
+    cluster_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if cluster_path.exists():
+        return pd.read_csv(cluster_path)
+
+    embeddings_df = pd.read_parquet(
+        f'./data/cache/embeddings/{year}/gemini_item1_raw_cache.parquet'
+    ).sort_values('ticker')
+
+    tickers = embeddings_df['ticker'].tolist()
+
+    X = np.vstack(embeddings_df['embedding'])
+
+    X = umap.UMAP(
+        n_neighbors=15,
+        min_dist=0.0,
+        n_components=10,
+        metric='cosine',
+        random_state=42,
+    ).fit_transform(X)
+
+    clusterer = hdbscan.HDBSCAN(
+        min_cluster_size=5,
+        min_samples=1,
+        prediction_data=True,
+    )
+
+    clusterer.fit(X)
+
+    P = hdbscan.all_points_membership_vectors(clusterer)
+
+    labels = P.argmax(axis=1)
+
+    cluster_df = pd.DataFrame({
+        'ticker': tickers,
+        'cluster': labels
+    })
+
+    cluster_df.to_csv(cluster_path, index=False)
+
+    return cluster_df
 
 ########################################
-# PART 2: Semantic distances
-########################################
-
-# Don't need to check path since cache already handles this
-print('Computing semantic distances...')
-semantic_df = get_semantic_distances(tickers)
-semantic_df.to_csv('./data/S&P500/semantics_tenk/raw/semantic_distances.csv')
-
-########################################
-# PART 3: Create 5-year intervals
+# PART 1: Create 5-year intervals
 ########################################
 
 intervals = []
@@ -57,8 +84,8 @@ for year in range(2010, date.today().year + 1, 5):
 
     start_date = f'{year}-01-01'
 
-    if year + 1 < date.today().year:
-        end_date = f'{year+1}-12-31'
+    if year + 5 < date.today().year:
+        end_date = f'{year+4}-12-31'
     else:
         end_date = date.today().strftime('%Y-%m-%d')
 
@@ -67,82 +94,7 @@ for year in range(2010, date.today().year + 1, 5):
     )
 
 ########################################
-# PART 4: Form Clusters
-########################################
-
-# I only want to have to calculate data sets for within a cluster
-# Form the cluster then use the tickers in the cluster to compute data
-cluster_path = Path('./data/clusters/clusters.csv')
-
-if cluster_path.exists():
-    print('Clusters already exist...')
-    cluster_df = pd.read_csv('./data/clusters/clusters.csv')
-else:
-    print('Clustering stocks...')
-
-    # Read in cached embeddings to cluster with
-    embeddings_df = pd.read_parquet('./data/cache/embeddings/gemini_item1_raw_cache.parquet')
-    embeddings_df = embeddings_df.sort_values('ticker')
-
-    tickers = embeddings_df['ticker'].to_list()
-    X = np.vstack(
-        embeddings_df['embedding'].values
-    )
-
-    # Performed a grid search and found that the following parameters worked best
-    # Using silhouette score
-    n_components = 35
-    state = 42
-    n_neighbors = 10
-
-    if MODEL == 'umap':
-        min_dist = 0.1
-        # UMAP
-        reducer = umap.UMAP(
-            n_neighbors=n_neighbors, 
-            n_components=n_components, 
-            min_dist=min_dist, 
-            metric='cosine', 
-            random_state=state,
-            n_jobs=1
-            )
-
-    elif MODEL == 'spectral':
-        reducer = SpectralEmbedding(
-            n_components=n_components, 
-            affinity='nearest_neighbors', 
-            n_neighbors=n_neighbors,
-            random_state=state)
-
-    reduced_embeddings = reducer.fit_transform(X)
-
-    # Agglomerative Clustering
-
-    # Found these params to work best
-    n_clusters = 40
-    clusterer = AgglomerativeClustering(
-        n_clusters=n_clusters,
-        metric='cosine',
-        linkage='average'
-    )
-    clusterer.fit(reduced_embeddings)
-
-    # Extract labels (-1 represents noise)
-    labels = clusterer.labels_
-    cluster_df = pd.DataFrame({'ticker': tickers, 'cluster': labels})
-
-    cluster_df.to_csv('./data/clusters/clusters.csv')
-    print('Clusters saved.')
-
-# Assign Clusters
-clusters = []
-for i in set(cluster_df['cluster']):
-    subset = cluster_df[cluster_df['cluster'] == i]
-    tickers = subset['ticker'].to_list()
-    clusters.append(Cluster(label=i, tickers=tickers))
-
-########################################
-# PART 5: Loop over intervals
+# PART 3: Loop over intervals
 ########################################
 
 # Include a delay and retry loop incase the YFinance API gets overloaded
@@ -156,6 +108,28 @@ for start_date, end_date in tqdm(
     unit='interval'
 ):
     tqdm.write(f'Processing {start_date} → {end_date}')
+
+    year = start_date[:4]
+    
+    # Call tickers by year
+    tickers_csv = pd.read_csv(f'./data/csv/{year}/tickers.csv')
+    tickers = tickers_csv['Ticker'].to_list()
+    tickers.sort()
+
+    # Don't need to check path since cache already handles this
+    print(f'Computing semantic distances for {year}...')
+    semantic_df = get_semantic_distances(tickers, year)
+    
+    cluster_df = build_clusters(year)
+    clusters = []
+    for label, group in cluster_df.groupby('cluster'):
+
+        clusters.append(
+            Cluster(
+                label=label,
+                tickers=group['ticker'].tolist()
+            )
+        )
 
     for cluster in tqdm(
         clusters,
