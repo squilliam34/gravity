@@ -5,6 +5,7 @@ import pandas as pd
 from collections.abc import Callable
 import numpy as np
 import networkx as nx
+from datetime import date
 
 # Personal modules
 from src.distance.factor_model.factor_model import (
@@ -16,6 +17,13 @@ from src.mass.mass import create_market_cap_df
 from src.distance.semantics.semantics_v2 import get_semantic_distances
 from src.distance.distance import get_lambda
 from config import DATA_DIR
+
+PERIODS = [
+    ('2010-01-01', '2014-12-31'),
+    ('2015-01-01', '2019-12-31'),
+    ('2020-01-01', '2024-12-31'),
+    ('2025-01-01', date.today().strftime('%Y-%m-%d')),
+]
 
 @dataclass
 class State:
@@ -33,7 +41,6 @@ class State:
     market_caps: object = None
     semantic_distances: object = None
     factor_distances: object = None
-    weights: object = None
     distances: object = None
     gravity: object = None
 
@@ -86,32 +93,28 @@ class Cluster:
         """
         return self.tickers
 
-    def get_state(self, start_date, end_date) -> State:
+    def get_state(self, date: str) -> State:
         """
         Retrieve or create the state object for a given date range.
 
         Args:
-        start_date (str): The start date for the requested state.
-        end_date (str): The end date for the requested state.
+        date (str): The start date for the requested state.
 
         Returns:
         State: The cached state object for the requested date range.
         """
-        key = (start_date, end_date)
+        period_start, period_end = self.get_period(date)
+
+        key = (period_start, period_end)
 
         if key not in self.states:
-            # Make the desired directory if it doesn't exist yet
-            path = (
-                DATA_DIR 
-                / 'clusters'
-                / f'{start_date}_{end_date}'
-                / f'{self.label}'
-            )
+
+            path = DATA_DIR / 'clusters' / f'{period_start}_{period_end}' / f'{self.label}'
             path.mkdir(parents=True, exist_ok=True)
 
             self.states[key] = State(
-                start_date=start_date,
-                end_date=end_date,
+                start_date=period_start,
+                end_date=period_end,
                 path=path
             )
 
@@ -122,7 +125,7 @@ class Cluster:
         start_date: str,
         end_date: str,
         attribute: str,
-        compute_fn: Callable[[], pd.DataFrame],
+        compute_fn: Callable[[str, str], pd.DataFrame],
         force_recompute: bool = False
     ) -> pd.DataFrame:
         """
@@ -138,16 +141,23 @@ class Cluster:
         Returns:
         pd.DataFrame: The requested data as a DataFrame.
         """
-        state = self.get_state(start_date=start_date, end_date=end_date)
+        state = self.get_state(start_date)
+        cache_start = state.start_date
+        cache_end = state.end_date
+
         path = state.path / f'{attribute}.parquet'
+
+        # Boolean to track if data needs to be saved to parquet
+        computed = False
 
         # Overwrite the existing data
         if force_recompute:
-            data = compute_fn()
+            data = compute_fn(cache_start, cache_end)
+            computed = True
 
         # Check memory cache
         elif (data := getattr(state, attribute)) is not None:
-            return data
+            pass
 
         # Check disk cache
         elif path.exists():
@@ -155,7 +165,8 @@ class Cluster:
 
         # Compute from scratch
         else:
-            data = compute_fn()
+            data = compute_fn(cache_start, cache_end)
+            computed = True
 
         # Handle failed computation
         if data.empty:
@@ -163,14 +174,18 @@ class Cluster:
             state.reason = f'{attribute} unavailable or insufficient data'
 
         # Save and update state
-        data.to_parquet(path)
+        if computed:
+            data.to_parquet(path)
+
         setattr(state, attribute, data)
 
-        return data
+        # Slice date by desired period
+        if 'date'  in data.index.names:
+            data = data.loc[
+                (data.index.get_level_values('date') >= start_date) &
+                (data.index.get_level_values('date') <= end_date)
+            ]
 
-        # Save and update state
-        data.to_parquet(path)
-        setattr(state, attribute, data)
         return data
 
     def get_factor_distances(
@@ -194,12 +209,12 @@ class Cluster:
             start_date,
             end_date,
             attribute='factor_distances',
-            compute_fn=lambda: compute_distances(
+            compute_fn=lambda s, e: compute_distances(
                 calculate_rolling_betas(
                     load_factor_data(
                         tickers=self.tickers,
-                        start_date=start_date,
-                        end_date=end_date,
+                        start_date=s,
+                        end_date=e,
                     ), self.tickers
                 )
             ),
@@ -227,10 +242,10 @@ class Cluster:
             start_date,
             end_date,
             attribute='market_caps',
-            compute_fn=lambda: create_market_cap_df(
+            compute_fn=lambda s, e: create_market_cap_df(
                 tickers=self.tickers,
-                start_date=start_date,
-                end_date=end_date,
+                start_date=s,
+                end_date=e,
             ),
             force_recompute=force_recompute
         )
@@ -256,37 +271,9 @@ class Cluster:
             start_date,
             end_date,
             attribute='semantic_distances',
-            compute_fn=lambda: get_semantic_distances(
+            compute_fn=lambda s, _: get_semantic_distances(
                 tickers=self.tickers,
-                year=start_date[:4]
-            ),
-            force_recompute=force_recompute
-        )
-
-    def get_weights(
-        self,
-        start_date, 
-        end_date, 
-        force_recompute = False
-    ) -> pd.DataFrame:
-        """
-        Return semantic distance data for the cluster.
-
-        Args:
-        start_date (str): The start date of the requested window.
-        end_date (str): The end date of the requested window.
-        force_recompute (bool): If True, indicates to ignore the existing data and recompute it.
-
-        Returns:
-        pd.DataFrame: Vix data transformed to use as weights for distances for the cluster.
-        """
-        return self._get_data(
-            start_date,
-            end_date,
-            attribute='weights',
-            compute_fn=lambda: get_lambda(
-                start_date=start_date,
-                end_date=end_date
+                year=s[:4]
             ),
             force_recompute=force_recompute
         )
@@ -312,21 +299,21 @@ class Cluster:
             start_date,
             end_date,
             attribute='distances',
-            compute_fn=lambda: self._calculate_distance(
+            compute_fn=lambda s, e: self._calculate_distance(
                 self._prepare_distance_inputs(
                     weights=self.get_weights(
-                        start_date,
-                        end_date,
+                        start_date=s,
+                        end_date=e,
                         force_recompute=force_recompute
                     ),
                     factor_distances=self.get_factor_distances(
-                        start_date,
-                        end_date,
+                        start_date=s,
+                        end_date=e,
                         force_recompute=force_recompute
                     ),
                     semantic_distances=self.get_semantic_distances(
-                        start_date,
-                        end_date,
+                        start_date=s,
+                        end_date=e,
                         force_recompute=force_recompute
                     ),
                 )
@@ -355,16 +342,16 @@ class Cluster:
             start_date,
             end_date,
             attribute='gravity',
-            compute_fn=lambda: self._calculate_gravity(
+            compute_fn=lambda s, e: self._calculate_gravity(
                 self._prepare_gravity_inputs(
                     market_caps=self.get_market_caps(
-                        start_date=start_date,
-                        end_date=end_date,
+                        start_date=s,
+                        end_date=e,
                         force_recompute=force_recompute
                     ),
                     distances=self.get_distances(
-                        start_date=start_date,
-                        end_date=end_date,
+                        start_date=s,
+                        end_date=e,
                         force_recompute=force_recompute
                     )
                 )
@@ -472,11 +459,8 @@ class Cluster:
             force_recompute=force_recompute
         )
 
-        print(type(gravity.index))
-        print(gravity.index)
-
         if gravity.empty:
-            return nx.Graph()
+            return None
 
         G = nx.Graph()
 
@@ -487,6 +471,10 @@ class Cluster:
         snapshot = gravity.loc[
             gravity.index.get_level_values('date') == pd.Timestamp(start_date)
         ]
+
+        # Requested date has no observations
+        if snapshot.empty:
+            return None
 
         for (_, stock_i, stock_j), row in snapshot.iterrows():
 
@@ -516,13 +504,6 @@ class Cluster:
         """
         # Check for valid data
         if df.empty: return pd.DataFrame()
-
-        # Compute final distance
-        # df['Distance'] = (
-        #     df['lambda']*df['factor distance']
-        #     +
-        #     (1-df['lambda'])*df['semantic distance']
-        # )
 
         df['Distance'] = df['factor distance'] * df['semantic distance']
 
@@ -612,3 +593,12 @@ class Cluster:
 
         # Gravity calculation
         return (df['mass_product'] / df['Distance']).to_frame(name='Gravity')
+
+    def get_period(self, date):
+        ts = pd.Timestamp(date)
+
+        for start, end in PERIODS:
+            if pd.Timestamp(start) <= ts <= pd.Timestamp(end):
+                return start, end
+
+        raise ValueError
