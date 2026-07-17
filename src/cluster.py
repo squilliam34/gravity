@@ -15,6 +15,7 @@ from src.distance.factor_model.factor_model import (
 from src.mass.mass import create_market_cap_df
 from src.distance.semantics.semantics_v2 import get_semantic_distances
 from src.distance.distance import get_lambda
+from config import DATA_DIR
 
 @dataclass
 class State:
@@ -100,7 +101,12 @@ class Cluster:
 
         if key not in self.states:
             # Make the desired directory if it doesn't exist yet
-            path = Path(f'./data/clusters/{start_date}_{end_date}/{self.label}/')
+            path = (
+                DATA_DIR 
+                / 'clusters'
+                / f'{start_date}_{end_date}'
+                / f'{self.label}'
+            )
             path.mkdir(parents=True, exist_ok=True)
 
             self.states[key] = State(
@@ -465,6 +471,9 @@ class Cluster:
             end_date,
             force_recompute=force_recompute
         )
+
+        print(type(gravity.index))
+        print(gravity.index)
 
         if gravity.empty:
             return nx.Graph()
