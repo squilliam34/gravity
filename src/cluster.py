@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 from collections.abc import Callable
 import numpy as np
+import networkx as nx
 
 # Personal modules
 from src.distance.factor_model.factor_model import (
@@ -451,6 +452,45 @@ class Cluster:
         )
         return df
 
+    def get_network(
+        self,
+        start_date,
+        end_date,
+        threshold=None,
+        force_recompute=False
+    ):
+
+        gravity = self.get_gravity(
+            start_date,
+            end_date,
+            force_recompute=force_recompute
+        )
+
+        if gravity.empty:
+            return nx.Graph()
+
+        G = nx.Graph()
+
+        # Add nodes
+        G.add_nodes_from(self.tickers)
+
+        # Pick a date snapshot
+        snapshot = gravity.loc[
+            gravity.index.get_level_values('date') == pd.Timestamp(start_date)
+        ]
+
+        for (_, stock_i, stock_j), row in snapshot.iterrows():
+
+            weight = row['Gravity']
+
+            if threshold is None or weight >= threshold:
+                G.add_edge(
+                    stock_i,
+                    stock_j,
+                    weight=weight
+                )
+
+        return G
 
     def _calculate_distance(
         self, 
@@ -469,20 +509,17 @@ class Cluster:
         if df.empty: return pd.DataFrame()
 
         # Compute final distance
-        df['Distance'] = (
-            df['lambda']*df['factor distance']
-            +
-            (1-df['lambda'])*df['semantic distance']
-        )
+        # df['Distance'] = (
+        #     df['lambda']*df['factor distance']
+        #     +
+        #     (1-df['lambda'])*df['semantic distance']
+        # )
 
-        df = df[
-            ['date', 'stock_i', 'stock_j', 'Distance']
-        ]
+        df['Distance'] = df['factor distance'] * df['semantic distance']
 
-        df.set_index(
-            ['date', 'stock_i', 'stock_j'],
-            inplace=True
-        )
+        df = df[['date', 'stock_i', 'stock_j', 'Distance']]
+
+        df.set_index(['date', 'stock_i', 'stock_j'], inplace=True)
 
         df.sort_index(inplace=True)
         return df
