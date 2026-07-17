@@ -66,7 +66,7 @@ class Cluster:
         Returns:
         str: A string showing the cluster label and its tickers.
         """
-        return f"Cluster {self.label}: {', '.join(self.tickers)}"
+        return f'Cluster {self.label}: {', '.join(self.tickers)}'
 
     def get_tickers(self) -> list[str]:
         """
