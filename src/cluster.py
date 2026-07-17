@@ -452,7 +452,18 @@ class Cluster:
         threshold=None,
         force_recompute=False
     ):
+        """
+        Build a network graph for the cluster from gravity values.
 
+        Args:
+        start_date (str): The start date of the requested window.
+        end_date (str): The end date of the requested window.
+        threshold (float | None): Optional minimum gravity weight required to add an edge.
+        force_recompute (bool): If True, indicates to ignore cached data and recompute it.
+
+        Returns:
+        networkx.Graph | None: A graph of the cluster's ticker relationships, or None if no data is available.
+        """
         gravity = self.get_gravity(
             start_date,
             end_date,
@@ -595,6 +606,18 @@ class Cluster:
         return (df['mass_product'] / df['Distance']).to_frame(name='Gravity')
 
     def get_period(self, date):
+        """
+        Return the period bounds that contain the requested date.
+
+        Args:
+        date (str): The date to locate within the configured periods.
+
+        Returns:
+        tuple[str, str]: The matching start and end dates for the requested period.
+
+        Raises:
+        ValueError: If the date does not fall within any configured period.
+        """
         ts = pd.Timestamp(date)
 
         for start, end in PERIODS:
