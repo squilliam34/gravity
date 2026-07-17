@@ -64,8 +64,8 @@ def calculate_rolling_betas(data: pd.DataFrame,
         # Get number of trading days using our fast lookup
         increment = len(month_indices[date])
 
-        # Ensure that t > window:
-        if t > window:
+        # Ensure that enough data exists:
+        if t >= window:
 
             Y = returns[t-window:t]
             MOM = momentum[t-window:t]
