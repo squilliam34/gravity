@@ -54,30 +54,17 @@ for start_date, end_date in tqdm(
     tqdm.write(f'Processing {start_date} → {end_date}')
 
     year = start_date[:4]
-    
-    ############################
-    ## Ensure embeddings exist
-    ############################
-
-    # Call tickers by year
-    tickers_csv = pd.read_csv(f'./data/csv/{year}/tickers.csv')
-    tickers = tickers_csv['Ticker'].to_list()
-    tickers.sort()
-
-    # Don't need to check path since cache already handles this
-    print(f'Computing semantic distances for {year}...')
-    semantic_df = get_semantic_distances(tickers, year)
 
     ############################
     ## Build Clusters
     ############################
     cluster_path = Path(f'./data/clusters/{year}/clusters.csv')
-    cluster_path.parent.mkdir(parents=True, exist_ok=True)
 
     if cluster_path.exists():
         cluster_df = pd.read_csv(cluster_path)
     
     else:
+        cluster_path.parent.mkdir(parents=True, exist_ok=True)
         embeddings_df = pd.read_parquet(
             f'./data/cache/embeddings/{year}/gemini_item1_raw_cache.parquet'
         ).sort_values('ticker')
@@ -113,13 +100,7 @@ for start_date, end_date in tqdm(
     
     clusters = []
     for label, group in cluster_df.groupby('cluster'):
-
-        clusters.append(
-            Cluster(
-                label=label,
-                tickers=group['ticker'].tolist()
-            )
-        )
+        clusters.append(Cluster(label=label, tickers=group['ticker'].tolist()))
 
     ############################
     ## Process each cluster
@@ -145,6 +126,4 @@ for start_date, end_date in tqdm(
                     tqdm.write(f'{cluster.label} failed ({attempt+1}/{MAX_RETRIES}): {e}')
                     time.sleep(RETRY_DELAY)
                 else:
-                    tqdm.write(
-                        f'{cluster.label} permanently failed: {e}'
-                    )
+                    tqdm.write(f'{cluster.label} permanently failed: {e}')
