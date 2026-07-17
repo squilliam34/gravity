@@ -51,6 +51,7 @@ def build_clusters(year):
         n_components=10,
         metric='cosine',
         random_state=42,
+        n_jobs=1
     ).fit_transform(X)
 
     clusterer = hdbscan.HDBSCAN(
@@ -71,12 +72,7 @@ def build_clusters(year):
     })
 
     cluster_df.to_csv(cluster_path, index=False)
-
     return cluster_df
-
-########################################
-# PART 1: Create 5-year intervals
-########################################
 
 intervals = []
 
@@ -92,10 +88,6 @@ for year in range(2010, date.today().year + 1, 5):
     intervals.append(
         (start_date, end_date)
     )
-
-########################################
-# PART 3: Loop over intervals
-########################################
 
 # Include a delay and retry loop incase the YFinance API gets overloaded
 # Should work after first try if the API returns an error response
