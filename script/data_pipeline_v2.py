@@ -20,6 +20,7 @@ from src.distance.factor_model.factor_model import (
 )
 from src.mass.mass import create_market_cap_df
 from src.cluster import Cluster
+from config import DATA_DIR
 print('Finished imports')
 
 # Suppress FutureWarnings and YFinance warnings
@@ -58,7 +59,7 @@ for start_date, end_date in tqdm(
     ############################
     ## Build Clusters
     ############################
-    cluster_path = Path(f'./data/clusters/{year}/clusters.csv')
+    cluster_path = DATA_DIR / 'clusters' / f'{year}' / 'clusters.csv'
 
     if cluster_path.exists():
         cluster_df = pd.read_csv(cluster_path)
@@ -66,7 +67,7 @@ for start_date, end_date in tqdm(
     else:
         cluster_path.parent.mkdir(parents=True, exist_ok=True)
         embeddings_df = pd.read_parquet(
-            f'./data/cache/embeddings/{year}/gemini_item1_raw_cache.parquet'
+            DATA_DIR / 'cache' / 'embeddings' / f'{year}' / 'gemini_item1_raw_cache.parquet'
         ).sort_values('ticker')
 
         tickers = embeddings_df['ticker'].tolist()
