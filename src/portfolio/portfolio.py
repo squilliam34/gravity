@@ -1,53 +1,55 @@
 '''A portfolio class for analysis and tracking performance'''
 from config import DATA_DIR
 from pathlib import Path
+from dataclasses import dataclass
+from typing import Dict, Optional
+from datetime import date
+
+
+@dataclass(frozen=true)
+class PortfolioState:
+    dates: date
+    holdings: Dict[str, float]
 
 class Portfolio:
     def __init__(
         self,
-        name,
-        initialization_date,
-        holdings,
+        states,
         benchmark='^GSPC'
     ):
-        self.name = name
-        self.initialization_date = initialization_date
-        self.holdings = holdings
         self.benchmark = benchmark
+        self.states: states
 
-        self.prices = None
         self.returns = None
         self.portfolio_returns = None
         self.benchmark_prices = None
 
-    def load_prices(
+    def calculate_returns(
         self,
-        start_date,
-        end_date
+        prices
     ):
 
-        tickers = list(self.holdings.values())
+        portfolio_returns = []
 
-        self.prices = yf.download(
-            tickers,
-            start=start_date,
-            end=end_date,
-            auto_adjust=True
-        )['Close']
+        for i, state in enumerate(self.states):
 
-        return self.prices
+            start = state.date
+            if i < len(self.states)-1:
+                end = self.states[i+1].date
+            else:
+                end = prices.index[-1]
 
-    def calculate_returns(self):
-        self.returns = (self.prices.pct_change().dropna())
+            period_prices = prices.loc[start:end]
+            weights = pd.Series(state.holdings)
+            returns = (
+                period_prices
+                .pct_change()
+                .mul(weights)
+                .sum(axis=1)
+            )
 
-        return self.returns
+            portfolio_returns.append(returns)
 
-    def load_benchmark(self):
+        self.portfolio_returns = pd.concat(portfolio_returns)
 
-        if path.exists(): return pd.read_csv
-        self.benchmark_prices = yf.download(
-            self.benchmark,
-            start=self.start_date,
-            end=self.end_date,
-            auto_adjust=True
-        )['Close']
+        return self.portfolio_returns
