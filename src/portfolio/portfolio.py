@@ -8,6 +8,36 @@ from config import DATA_DIR
 import matplotlib.pyplot as plt
 import numpy as np
 
+PERIODS = [
+    ('2010-01-01', '2014-12-31'),
+    ('2015-01-01', '2019-12-31'),
+    ('2020-01-01', '2024-12-31'),
+    ('2025-01-01', date.today().strftime('%Y-%m-%d')),
+]
+
+
+def get_valid_portfolio_period(start_date):
+    """
+    Return the predefined portfolio period containing start_date.
+    """
+
+    start_date = pd.Timestamp(start_date)
+
+    for period_start, period_end in PERIODS:
+
+        period_start = pd.Timestamp(period_start)
+        period_end = pd.Timestamp(period_end)
+
+        if period_start <= start_date <= period_end:
+            return (
+                period_start.strftime('%Y-%m-%d'),
+                period_end.strftime('%Y-%m-%d')
+            )
+
+    raise ValueError(
+        f'No valid portfolio period found for {start_date.date()}.'
+    )
+
 @dataclass
 class HoldingPeriod:
     period: tuple[pd.Timestamp, pd.Timestamp]
@@ -21,7 +51,8 @@ class HoldingPeriod:
 
     portfolio_returns: Optional[pd.Series] = field(default=None, init=False, repr=False)
     def load_prices(self, benchmark='^GSPC'):
-        start, end = self.period
+        period_start, period_end = get_valid_portfolio_period(self.period[0])
+        
         period_str = f'{pd.Timestamp(start).date()}_{pd.Timestamp(end).date()}'
 
         cache_dir = (
