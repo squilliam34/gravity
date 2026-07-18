@@ -85,14 +85,24 @@ def get_period_leaders(
     force_recompute: bool = False
 ) -> pd.DataFrame:
     """
+    Identify the leader stock for each cluster during each rebalance period.
+
+    For each rebalance period and each cluster, the function attempts to locate
+    a valid network snapshot (via `get_valid_network_date`). If a network is
+    found, it computes eigenvector centrality scores and selects the ticker
+    with the highest centrality as the leader. The function records status
+    codes for missing networks, too-small graphs, or centrality failures.
+
     Args:
-    periods (list[tuple]): Rebalance periods as (start_date, end_date).
-    clusters (list[Cluster]): List of Cluster objects.
-    threshold (float): Optional edge weight threshold.
-    force_recompute (bool): Recompute cached gravity data.
+    periods (list[tuple[str, str]]): Rebalance periods as `(start_date, end_date)` strings.
+    clusters (list[Cluster]): List of `Cluster` instances to evaluate.
+    threshold (float): Optional minimum edge weight required to include connections.
+    force_recompute (bool): If True, force recomputation of any cached network data.
 
     Returns:
-    pd.DataFrame: Cluster leaders by rebalance period.
+    pd.DataFrame: Rows with columns `date`, `cluster`, `leader`,
+      `centrality`, and `status` describing the result for each cluster and
+      rebalance period.
     """
     leaders = []
     for (period_start, period_end) in tqdm(
@@ -160,13 +170,44 @@ def weight_portfolio(
     schema: str='equal',
     **kwargs
 )->dict[str, float]:
-    if schema == 'equal': return equal_weights(tickers)
+    """
+    Return a mapping of ticker weights according to the requested schema.
+
+    Supported schemas:
+      - `equal`: assign equal weight to each ticker.
+
+    Args:
+    tickers (list[str]): List of ticker symbols to weight.
+    schema (str): Weighting schema name (default: 'equal').
+    **kwargs: Schema-specific keyword arguments (currently unused).
+
+    Returns:
+    dict: Mapping of ticker -> weight (floats summing to ~1.0).
+
+    Raises:
+    ValueError: If an unknown `schema` is provided.
+    """
+
+    if schema == 'equal':
+        return equal_weights(tickers)
 
     raise ValueError(f'Unknown weighting schema: {schema}')
 
 def equal_weights(
     tickers: list[str]
 ) -> dict[str, float]:
+    """
+    Assign equal weights to a list of tickers.
+
+    Args:
+    tickers (list[str]): Non-empty list of ticker symbols.
+
+    Returns:
+    dict[str, float]: Mapping of each ticker to its equal weight.
+
+    Raises:
+    ValueError: If `tickers` is empty.
+    """
 
     if len(tickers) == 0:
         raise ValueError('Cannot weight an empty portfolio.')

@@ -35,8 +35,8 @@ class HoldingPeriod:
     portfolio_returns: Optional[pd.Series] = field(default=None, init=False, repr=False)
 
     def calculate_returns(
-        self, prices: 
-        pd.DataFrame, 
+        self, 
+        prices: pd.DataFrame, 
         benchmark_prices: pd.Series
     ) -> pd.Series:
         """
@@ -48,9 +48,9 @@ class HoldingPeriod:
         benchmark returns for the same date range.
 
         Args:
-        prices: DataFrame of adjusted close prices indexed by date with
+        prices (pd.DataFrame): DataFrame of adjusted close prices indexed by date with
           columns for all tickers in the overall portfolio.
-        benchmark_prices: Series of adjusted benchmark close prices indexed
+        benchmark_prices (pd.Series): Series of adjusted benchmark close prices indexed
           by date.
 
         Returns:
@@ -114,16 +114,16 @@ class Portfolio:
 
     def __init__(
         self,
-        periods: Iterable["HoldingPeriod"],
+        periods: Iterable['HoldingPeriod'],
         benchmark: str = '^GSPC'
     ) -> None:
         """
         Initialize the portfolio.
 
         Args:
-        periods: Iterable of `HoldingPeriod` instances defining the
+        periods (Iterable[HoldingPeriod]): Iterable of `HoldingPeriod` instances defining the
           strategy across time.
-        benchmark: Ticker symbol for the benchmark (default '^GSPC').
+        benchmark (str): Ticker symbol for the benchmark (default '^GSPC').
         """
         self.benchmark = benchmark
         self.periods = periods
@@ -157,7 +157,7 @@ class Portfolio:
         `yfinance` and write them to cache.
 
         Args:
-        benchmark: Benchmark ticker to download if benchmark cache is
+        benchmark (str): Benchmark ticker to download if benchmark cache is
           missing (default '^GSPC').
 
         Returns:
@@ -316,9 +316,9 @@ class Portfolio:
         Compute the (annualized) Sharpe ratio for the portfolio.
 
         Args:
-        risk_free_rate: Annual risk-free rate expressed as a decimal (e.g.
+        risk_free_rate (float): Annual risk-free rate expressed as a decimal (e.g.
           0.02 for 2%).
-        annualization: Number of trading periods per year (default 252).
+        annualization (int): Number of trading periods per year (default 252).
 
         Returns:
         float: Annualized Sharpe ratio (mean excess return divided by
