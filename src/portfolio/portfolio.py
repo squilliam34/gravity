@@ -1,14 +1,10 @@
 '''A portfolio class for analysis and tracking performance'''
-from config import DATA_DIR
-from pathlib import Path
 from dataclasses import dataclass
-from typing import Dict, Optional
-from datetime import date
-
+import pandas as pd
 
 @dataclass(frozen=true)
-class PortfolioState:
-    dates: date
+class HoldingPeriod:
+    period: tuple[pd.Timestamp, pd.Timestamp]
     holdings: Dict[str, float]
 
 class Portfolio:
@@ -20,36 +16,14 @@ class Portfolio:
         self.benchmark = benchmark
         self.states: states
 
-        self.returns = None
-        self.portfolio_returns = None
-        self.benchmark_prices = None
+    def calculate_returns(self):
+        # concatenate state returns
+        pass
 
-    def calculate_returns(
-        self,
-        prices
-    ):
+    def plot(self):
+        # plot full strategy
+        pass
 
-        portfolio_returns = []
-
-        for i, state in enumerate(self.states):
-
-            start = state.date
-            if i < len(self.states)-1:
-                end = self.states[i+1].date
-            else:
-                end = prices.index[-1]
-
-            period_prices = prices.loc[start:end]
-            weights = pd.Series(state.holdings)
-            returns = (
-                period_prices
-                .pct_change()
-                .mul(weights)
-                .sum(axis=1)
-            )
-
-            portfolio_returns.append(returns)
-
-        self.portfolio_returns = pd.concat(portfolio_returns)
-
-        return self.portfolio_returns
+    def sharpe(self):
+        # use the concate
+        pass
