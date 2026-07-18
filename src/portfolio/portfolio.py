@@ -7,6 +7,7 @@ from pathlib import Path
 from config import DATA_DIR
 import matplotlib.pyplot as plt
 import numpy as np
+from datetime import date
 
 PERIODS = [
     ('2010-01-01', '2014-12-31'),
@@ -52,7 +53,7 @@ class HoldingPeriod:
     portfolio_returns: Optional[pd.Series] = field(default=None, init=False, repr=False)
     def load_prices(self, benchmark='^GSPC'):
         period_start, period_end = get_valid_portfolio_period(self.period[0])
-        
+
         period_str = f'{pd.Timestamp(start).date()}_{pd.Timestamp(end).date()}'
 
         cache_dir = (
