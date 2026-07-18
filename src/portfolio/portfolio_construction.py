@@ -154,3 +154,23 @@ def get_period_leaders(
                 })
 
     return pd.DataFrame(leaders)
+
+def weight_portfolio(
+    tickers: list[str],
+    schema: str='equal',
+    **kwargs
+)->dict[str, float]:
+    if schema == 'equal': return equal_weights(tickers)
+
+    raise ValueError(f'Unknown weighting schema: {schema}')
+
+def equal_weights(
+    tickers: list[str]
+) -> dict[str, float]:
+
+    if len(tickers) == 0:
+        raise ValueError('Cannot weight an empty portfolio.')
+
+    weight = 1 / len(tickers)
+
+    return {ticker: weight for ticker in tickers}
