@@ -1,66 +1,178 @@
 '''A portfolio class for analysis and tracking performance'''
 from dataclasses import dataclass, field
 import pandas as pd
-from typing import Dict, Optional
+from typing import Dict, Optional, Iterable
 import yfinance as yf
 from pathlib import Path
-from config import DATA_DIR
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import date
 
-PERIODS = [
-    ('2010-01-01', '2014-12-31'),
-    ('2015-01-01', '2019-12-31'),
-    ('2020-01-01', '2024-12-31'),
-    ('2025-01-01', date.today().strftime('%Y-%m-%d')),
-]
-
-
-def get_valid_portfolio_period(start_date):
-    """
-    Return the predefined portfolio period containing start_date.
-    """
-
-    start_date = pd.Timestamp(start_date)
-
-    for period_start, period_end in PERIODS:
-
-        period_start = pd.Timestamp(period_start)
-        period_end = pd.Timestamp(period_end)
-
-        if period_start <= start_date <= period_end:
-            return (
-                period_start.strftime('%Y-%m-%d'),
-                period_end.strftime('%Y-%m-%d')
-            )
-
-    raise ValueError(
-        f'No valid portfolio period found for {start_date.date()}.'
-    )
+from config import DATA_DIR
 
 @dataclass
 class HoldingPeriod:
+    """
+    Represents a single holding period within a portfolio.
+
+    Attributes:
+    period: A tuple of (start_timestamp, end_timestamp) for the holding period.
+    holdings: Mapping of ticker symbols to portfolio weights for the period.
+    benchmark_prices: Cached benchmark price series for the period (set during
+      return calculation).
+    benchmark_returns: Cached benchmark returns for the period (set during
+      return calculation).
+    portfolio_returns: Calculated portfolio returns time series for the period.
+    """
     period: tuple[pd.Timestamp, pd.Timestamp]
     holdings: Dict[str, float]
 
-    prices: Optional[pd.DataFrame] = field(default=None, init=False, repr=False)
-    returns: Optional[pd.DataFrame] = field(default=None, init=False, repr=False)
-
+    # Period only needs to hold returns. Global portfolio
+    # will hold prices for all holdings across the whole
+    # period. Then the period calculates its returns 
     benchmark_prices: Optional[pd.Series] = field(default=None, init=False, repr=False)
     benchmark_returns: Optional[pd.Series] = field(default=None, init=False, repr=False)
 
     portfolio_returns: Optional[pd.Series] = field(default=None, init=False, repr=False)
 
-    def load_prices(self, benchmark='^GSPC'):
-        period_start, period_end = get_valid_portfolio_period(self.period[0])
+    def calculate_returns(
+        self, prices: 
+        pd.DataFrame, 
+        benchmark_prices: pd.Series
+    ) -> pd.Series:
+        """
+        Compute returns for the holdings in this period.
 
-        period_str = f'{pd.Timestamp(period_start).date()}_{pd.Timestamp(period_end).date()}'
+        This method extracts the price series for the tickers held during the
+        period, computes daily percentage returns, aggregates them using the
+        period weights to form a portfolio return series, and computes the
+        benchmark returns for the same date range.
+
+        Args:
+        prices: DataFrame of adjusted close prices indexed by date with
+          columns for all tickers in the overall portfolio.
+        benchmark_prices: Series of adjusted benchmark close prices indexed
+          by date.
+
+        Returns:
+        pd.Series: The portfolio returns for this holding period.
+        """
+        start, end = self.period
+
+        tickers = list(self.holdings.keys())
+        prices = prices.loc[
+            start:end,
+            tickers
+        ]
+
+        self.returns = prices.pct_change().dropna()
+        weights = pd.Series(self.holdings)
+        self.portfolio_returns = (
+            self.returns
+            .mul(weights, axis=1)
+            .sum(axis=1)
+        )
+
+        benchmark = benchmark_prices.loc[start:end]
+        self.benchmark_returns = (
+            benchmark
+            .pct_change()
+            .dropna()
+        )
+
+        return self.portfolio_returns
+
+    def __str__(self) -> str:
+        """
+        Return a human-readable summary of the holding period.
+
+        Shows the date range and each ticker with its weight formatted as a
+        percentage.
+        """
+
+        start, end = self.period
+        lines = [
+            f'Holding Period: {start.date()} - {end.date()}',
+            f'Holdings: {len(self.holdings)}',
+            '-' * 40
+        ]
+
+        for ticker, weight in sorted(self.holdings.items()):
+            lines.append(f'{ticker:<6} {weight:.2%}')
+
+        return '\n'.join(lines)
+
+class Portfolio:
+    """
+    Container for multiple `HoldingPeriod` objects representing a
+    backtest/trading strategy over time.
+
+    The `Portfolio` gathers prices for all tickers across the combined
+    date range, computes concatenated portfolio and benchmark returns, and
+    provides simple analysis helpers such as plotting and Sharpe ratio
+    calculation.
+    """
+
+    def __init__(
+        self,
+        periods: Iterable["HoldingPeriod"],
+        benchmark: str = '^GSPC'
+    ) -> None:
+        """
+        Initialize the portfolio.
+
+        Args:
+        periods: Iterable of `HoldingPeriod` instances defining the
+          strategy across time.
+        benchmark: Ticker symbol for the benchmark (default '^GSPC').
+        """
+        self.benchmark = benchmark
+        self.periods = periods
+
+        self.start_date = min(
+            p.period[0]
+            for p in self.periods
+        )
+
+        self.end_date = max(
+            p.period[1]
+            for p in self.periods
+        )
+
+        # Store prices for every stock in the portfolio
+        # across the period regardless of holding times
+        self.prices = None
+
+        self.portfolio_returns = None
+        self.benchmark_returns = None
+
+    def load_prices(
+        self, 
+        benchmark: str = '^GSPC'
+    ) -> pd.DataFrame:
+        """
+        Load (and cache) price series for all tickers and the benchmark.
+
+        This method will look for cached CSV files under the configured
+        `DATA_DIR` and, if missing, download adjusted close prices using
+        `yfinance` and write them to cache.
+
+        Args:
+        benchmark: Benchmark ticker to download if benchmark cache is
+          missing (default '^GSPC').
+
+        Returns:
+        pd.DataFrame: Adjusted close prices for all tickers across the
+          portfolio's full date range.
+        """
+
+        if self.prices is not None:
+            return self.prices
 
         cache_dir = (
             DATA_DIR
             / 'portfolio'
-            / period_str
+            / f'{pd.Timestamp(self.start_date).strftime('%Y-%m-%d')}_'
+              f'{pd.Timestamp(self.end_date).strftime('%Y-%m-%d')}'
             / 'prices'
         )
 
@@ -78,12 +190,14 @@ class HoldingPeriod:
             )
 
         else:
-            tickers = list(self.holdings.keys())
+            tickers = set()
+            for period in self.periods:
+                tickers.update(period.holdings.keys())
 
             self.prices = yf.download(
                 tickers,
-                start=period_start,
-                end=period_end,
+                start=self.start_date,
+                end=self.end_date,
                 auto_adjust=True,
                 progress=False
             )['Close']
@@ -101,8 +215,8 @@ class HoldingPeriod:
         else:
             self.benchmark_prices = yf.download(
                 benchmark,
-                start=period_start,
-                end=period_end,
+                start=self.start_date,
+                end=self.end_date,
                 auto_adjust=True,
                 progress=False
             )['Close']
@@ -110,57 +224,35 @@ class HoldingPeriod:
             self.benchmark_prices.to_csv(benchmark_path)
         return self.prices
 
-    def calculate_returns(self):
-        if self.prices is None:
-            raise ValueError('Prices have not been loaded.')
+    def calculate_returns(self) -> pd.Series:
+        """
+        Compute and concatenate returns for all holding periods.
 
-        self.returns = self.prices.pct_change().dropna()
+        The method calls each `HoldingPeriod.calculate_returns` to compute the
+        per-period portfolio returns and then concatenates and sorts them to
+        produce continuous portfolio and benchmark return series for the
+        strategy.
 
-        weights = pd.Series(self.holdings)
+        Returns:
+        pd.Series: Concatenated portfolio returns indexed by date.
+        """
 
-        self.portfolio_returns = (
-            self.returns
-            .mul(weights, axis=1)
-            .sum(axis=1)
-        )
-
-        self.benchmark_returns = (
-            self.benchmark_prices
-            .pct_change()
-            .dropna()
-        )
-
-        return self.portfolio_returns
-
-class Portfolio:
-    def __init__(
-        self,
-        states,
-        benchmark='^GSPC'
-    ):
-        self.benchmark = benchmark
-        self.states = states
-
-        self.portfolio_returns = None
-        self.benchmark_returns = None
-
-    def calculate_returns(self):
-        # concatenate state returns
+        # concatenate period returns
         portfolio_returns = []
         benchmark_returns = []
 
-        for state in self.states:
+        for period in self.periods:
 
-            # load prices if needed
-            if state.prices is None:
-                state.load_prices(self.benchmark)
+            portfolio_returns.append(
+                period.calculate_returns(
+                    self.prices,
+                    self.benchmark_prices
+                )
+            )
 
-            # calculate returns if needed
-            if state.portfolio_returns is None:
-                state.calculate_returns()
-
-            portfolio_returns.append(state.portfolio_returns)
-            benchmark_returns.append(state.benchmark_returns)
+            benchmark_returns.append(
+                period.benchmark_returns
+            )
 
         self.portfolio_returns = (
             pd.concat(portfolio_returns)
@@ -174,7 +266,15 @@ class Portfolio:
 
         return self.portfolio_returns
 
-    def plot(self):
+    def plot(self) -> None:
+        """
+        Plot cumulative growth of $1 for the portfolio and benchmark.
+
+        Computes cumulative compounded equity curves from the return series
+        and displays a matplotlib line chart comparing the portfolio to the
+        benchmark.
+        """
+
         # plot full strategy
         if self.portfolio_returns is None:
             self.calculate_returns()
@@ -211,8 +311,20 @@ class Portfolio:
         self,
         risk_free_rate: float = 0.0,
         annualization: int = 252
-    ):
-        # use the concate
+    ) -> float:
+        """
+        Compute the (annualized) Sharpe ratio for the portfolio.
+
+        Args:
+        risk_free_rate: Annual risk-free rate expressed as a decimal (e.g.
+          0.02 for 2%).
+        annualization: Number of trading periods per year (default 252).
+
+        Returns:
+        float: Annualized Sharpe ratio (mean excess return divided by
+          standard deviation, scaled by sqrt(annualization)).
+        """
+
         if self.portfolio_returns is None:
             self.calculate_returns()
 
