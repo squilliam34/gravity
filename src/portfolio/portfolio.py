@@ -1,12 +1,14 @@
 '''A portfolio class for analysis and tracking performance'''
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import pandas as pd
 from typing import Dict, Optional
 import yfinance as yf
 from pathlib import Path
 from config import DATA_DIR
+import matplotlib.pyplot as plt
+import numpy as np
 
-@dataclass(frozen=true)
+@dataclass
 class HoldingPeriod:
     period: tuple[pd.Timestamp, pd.Timestamp]
     holdings: Dict[str, float]
@@ -104,16 +106,87 @@ class Portfolio:
         benchmark='^GSPC'
     ):
         self.benchmark = benchmark
-        self.states: states
+        self.states = states
 
     def calculate_returns(self):
         # concatenate state returns
-        pass
+        portfolio_returns = []
+        benchmark_returns = []
+
+        for state in self.states:
+
+            # load prices if needed
+            if state.prices is None:
+                state.load_prices(self.benchmark)
+
+            # calculate returns if needed
+            if state.portfolio_returns is None:
+                state.calculate_returns()
+
+            portfolio_returns.append(state.portfolio_returns)
+            benchmark_returns.append(state.benchmark_returns)
+
+        self.portfolio_returns = (
+            pd.concat(portfolio_returns)
+            .sort_index()
+        )
+
+        self.benchmark_returns = (
+            pd.concat(benchmark_returns)
+            .sort_index()
+        )
+
+        return self.portfolio_returns
 
     def plot(self):
         # plot full strategy
-        pass
+        if self.portfolio_returns is None:
+            self.calculate_returns()
 
-    def sharpe(self):
+        portfolio_equity = (
+            1 + self.portfolio_returns
+        ).cumprod()
+
+        benchmark_equity = (
+            1 + self.benchmark_returns
+        ).cumprod()
+
+        plt.figure(figsize=(10, 5))
+
+        plt.plot(
+            portfolio_equity,
+            label='Portfolio'
+        )
+
+        plt.plot(
+            benchmark_equity,
+            label=self.benchmark
+        )
+
+        plt.title('Portfolio Performance')
+        plt.xlabel('Date')
+        plt.ylabel('Growth of $1')
+        plt.legend()
+        plt.grid(alpha=0.3)
+
+        plt.show()
+
+    def sharpe(
+        self,
+        risk_free_rate: float = 0.0,
+        annualization: int = 252
+    ):
         # use the concate
-        pass
+        if self.portfolio_returns is None:
+            self.calculate_returns()
+
+        excess_returns = (
+            self.portfolio_returns
+            - risk_free_rate / annualization
+        )
+
+        return (
+            np.sqrt(annualization)
+            * excess_returns.mean()
+            / excess_returns.std()
+        )
