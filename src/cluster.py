@@ -22,7 +22,8 @@ PERIODS = [
     ('2010-01-01', '2014-12-31'),
     ('2015-01-01', '2019-12-31'),
     ('2020-01-01', '2024-12-31'),
-    ('2025-01-01', date.today().strftime('%Y-%m-%d')),
+    # ('2025-01-01', date.today().strftime('%Y-%m-%d')),
+    ('2025-01-01', '2026-07-17'),
 ]
 
 @dataclass
@@ -624,4 +625,7 @@ class Cluster:
             if pd.Timestamp(start) <= ts <= pd.Timestamp(end):
                 return start, end
 
-        raise ValueError
+        raise ValueError(
+            f'No period found for {ts}.\n'
+            f'Available periods:\n{PERIODS}'
+        )
