@@ -51,10 +51,11 @@ class HoldingPeriod:
     benchmark_returns: Optional[pd.Series] = field(default=None, init=False, repr=False)
 
     portfolio_returns: Optional[pd.Series] = field(default=None, init=False, repr=False)
+
     def load_prices(self, benchmark='^GSPC'):
         period_start, period_end = get_valid_portfolio_period(self.period[0])
 
-        period_str = f'{pd.Timestamp(start).date()}_{pd.Timestamp(end).date()}'
+        period_str = f'{pd.Timestamp(period_start).date()}_{pd.Timestamp(period_end).date()}'
 
         cache_dir = (
             DATA_DIR
@@ -81,8 +82,8 @@ class HoldingPeriod:
 
             self.prices = yf.download(
                 tickers,
-                start=start,
-                end=end,
+                start=period_start,
+                end=period_end,
                 auto_adjust=True,
                 progress=False
             )['Close']
@@ -100,8 +101,8 @@ class HoldingPeriod:
         else:
             self.benchmark_prices = yf.download(
                 benchmark,
-                start=start,
-                end=end,
+                start=period_start,
+                end=period_end,
                 auto_adjust=True,
                 progress=False
             )['Close']
@@ -139,6 +140,9 @@ class Portfolio:
     ):
         self.benchmark = benchmark
         self.states = states
+
+        self.portfolio_returns = None
+        self.benchmark_returns = None
 
     def calculate_returns(self):
         # concatenate state returns
