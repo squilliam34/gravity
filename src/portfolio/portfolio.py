@@ -318,7 +318,7 @@ class Portfolio:
 
     def sharpe(
         self,
-        risk_free_rate: float = 0.0,
+        risk_free_rate: float,
         annualization: int = 252
     ) -> float:
         """
@@ -347,3 +347,94 @@ class Portfolio:
             * excess_returns.mean()
             / excess_returns.std()
         )
+    
+    def calculate_cagr(self, returns: pd.Series) -> float:
+        """
+        Calculate annualized compound growth rate.
+        """
+        years = (
+            returns.index[-1] - returns.index[0]
+        ).days / 365.25
+
+        return (
+            (1 + returns).prod() ** (1 / years)
+            - 1
+        )
+
+    def calculate_cumulative_outperformance(self) -> float:
+        """
+        Calculate total portfolio outperformance versus benchmark.
+        """
+        portfolio_growth = (
+            1 + self.portfolio_returns
+        ).prod()
+
+        benchmark_growth = (
+            1 + self.benchmark_returns
+        ).prod()
+
+        return (
+            portfolio_growth / benchmark_growth
+            - 1
+        )
+
+    def calculate_annualized_alpha(self) -> float:
+        """
+        Calculate annualized return difference versus benchmark.
+        """
+        portfolio_cagr = self.calculate_cagr(
+            self.portfolio_returns
+        )
+
+        benchmark_cagr = self.calculate_cagr(
+            self.benchmark_returns
+        )
+
+        return portfolio_cagr - benchmark_cagr
+
+    def calculate_information_ratio(self) -> float:
+        """
+        Calculate annualized information ratio.
+        """
+        excess_returns = (
+            self.portfolio_returns
+            - self.benchmark_returns
+        )
+
+        return (
+            excess_returns.mean()
+            /
+            excess_returns.std()
+        ) * np.sqrt(252)
+
+    def portfolio_performance(self, risk_free_rate: float) -> pd.DataFrame:
+        """
+        Generate summary performance statistics.
+
+        Returns:
+        pd.DataFrame: Performance summary table.
+        """
+
+        # Ensure returns exist
+        if self.portfolio_returns is None:
+            self.calculate_returns()
+
+        metrics = {
+            'Annualized Return': self.calculate_cagr(
+                self.portfolio_returns
+            ),
+            'Benchmark Annualized Return': self.calculate_cagr(
+                self.benchmark_returns
+            ),
+            'Annualized Alpha': self.calculate_annualized_alpha(),
+            'Cumulative Outperformance': self.calculate_cumulative_outperformance(),
+            'Information Ratio': self.calculate_information_ratio(),
+            'Sharpe Ratio': self.sharpe(risk_free_rate=risk_free_rate)
+        }
+
+        results = pd.DataFrame(
+            metrics,
+            index=[self.strategy_id]
+        ).T
+
+        return results
