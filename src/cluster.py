@@ -302,11 +302,6 @@ class Cluster:
             attribute='distances',
             compute_fn=lambda s, e: self._calculate_distance(
                 self._prepare_distance_inputs(
-                    weights=self.get_weights(
-                        start_date=s,
-                        end_date=e,
-                        force_recompute=force_recompute
-                    ),
                     factor_distances=self.get_factor_distances(
                         start_date=s,
                         end_date=e,
@@ -361,8 +356,7 @@ class Cluster:
         )
 
     def _prepare_distance_inputs(
-        self,
-        weights:pd.DataFrame, 
+        self, 
         factor_distances:pd.DataFrame, 
         semantic_distances:pd.DataFrame,
     ) -> pd.DataFrame:
@@ -370,7 +364,6 @@ class Cluster:
         Prepares the data prior to calculating distance.
 
         Args:
-        weights (pd.DataFrame): The weights to weight each distance metric by.
         factor_distances (pd.DataFrame): The distance of factors between stocks across time.
         semantic_distances (pd.DataFrame): The distance in semantic meaning between stocks across time.
 
@@ -383,7 +376,7 @@ class Cluster:
         factor_distances = factor_distances.copy()
         semantic_distances = semantic_distances.copy()
         # Convert semantic distance matrix into a MultiIndex for easy alignment
- 
+
         # Mask upper triangle (exclude diagonal + duplicates) 
         mask = np.triu(np.ones(semantic_distances.shape), k=1).astype(bool) 
         semantic_distances = ( 
@@ -393,16 +386,20 @@ class Cluster:
         ) 
         semantic_distances.index.names = ['stock_i', 'stock_j'] 
 
-        daily_index = pd.DatetimeIndex(weights.index)
+        dates = (
+            factor_distances.index
+            .get_level_values('month')
+            .unique()
+            .sort_values()
+        )
 
-        # Create master dataframe
         pairs = pd.MultiIndex.from_product(
             [
-                daily_index,
+                dates,
                 self.tickers,
                 self.tickers
             ],
-            names=['date', 'stock_i', 'stock_j']
+            names=['month', 'stock_i', 'stock_j']
         )
 
         # Remove duplicates
@@ -414,34 +411,18 @@ class Cluster:
 
         df = pd.DataFrame(index=pairs).reset_index()
 
-        # Join lambda (the weights for )
-        df = df.join(
-            weights,
-            on='date'
-        )
-
-        # Join semantic distances
         df = df.join(
             semantic_distances,
             on=['stock_i', 'stock_j']
         )
 
-        # Convert date → month
-        df['month'] = df['date'].dt.to_period('M')
-
-        # Join factor distances
         df = df.join(
             factor_distances,
             on=['month', 'stock_i', 'stock_j']
         )
 
-        df.drop(
-            columns='month',
-            inplace=True
-        )
-
         df.dropna(
-            subset=['lambda', 'factor distance'],
+            subset=['factor distance'],
             inplace=True
         )
         return df
@@ -526,7 +507,11 @@ class Cluster:
         df.sort_index(inplace=True)
         return df
 
-    def _prepare_gravity_inputs(self, market_caps, distances): 
+    def _prepare_gravity_inputs(
+        self, 
+        market_caps, 
+        distances
+    ): 
         """
         Prepare all the data for gravity calculation.
         """ 
@@ -536,59 +521,51 @@ class Cluster:
         market_caps = market_caps.copy()
         distances = distances.copy()
 
-        # Ensure all data sources have the same index format
+        # Create a shared month column to merge with distance data
         market_caps = market_caps.reset_index()
-        market_caps['date'] = pd.to_datetime(market_caps['date']).dt.tz_localize(None)
-        market_caps = market_caps.set_index(['date','ticker']).sort_index()
-
-        distances.reset_index(inplace=True)
-        distances['date'] = pd.to_datetime(distances['date'])
-        distances['date'] = (
-            pd.to_datetime(distances['date'])
-            .dt.tz_localize(None)
-        )
-        distances = distances.set_index(
-            ['date', 'stock_i', 'stock_j']
-        ).sort_index()
-
-        # Ensure market_cap data has the same date range as distance data
-        dates = distances.index.get_level_values('date').unique()
-        market_caps = market_caps.loc[
-            market_caps.index.get_level_values('date').isin(dates)
-        ]
-
-        # Convert market_caps df to multiindex that matches distance data
-        idx = distances.index
-        distances['mass_i'] = (
-            market_caps.reindex(
-                pd.MultiIndex.from_arrays(
-                    [
-                        idx.get_level_values('date'),
-                        idx.get_level_values('stock_i')
-                    ]
-                )
-            )['market_cap']
-            .to_numpy()
+        market_caps['month'] = (
+            market_caps['date']
+            .dt.to_period('M')
         )
 
-        distances['mass_j'] = (
-            market_caps.reindex(
-                pd.MultiIndex.from_arrays(
-                    [
-                        idx.get_level_values('date'),
-                        idx.get_level_values('stock_j')
-                    ]
-                )
-            )['market_cap']
-            .to_numpy()
+        distances = distances.reset_index()
+
+        # Merge on stocks
+        distances = distances.merge(
+            market_caps[
+                ['month', 'ticker', 'date', 'market_cap']
+            ].rename(
+                columns={
+                    'ticker': 'stock_i',
+                    'market_cap': 'mass_i'
+                }
+            ),
+            on=['month', 'stock_i'],
+            how='left'
+        )
+        distances = distances.merge(
+            market_caps[
+                ['month', 'ticker', 'market_cap']
+            ].rename(
+                columns={
+                    'ticker': 'stock_j',
+                    'market_cap': 'mass_j'
+                }
+            ),
+            on=['month', 'stock_j'],
+            how='left'
         )
 
-        # Calculate mass products
         distances['mass_product'] = (
             distances['mass_i']
             * distances['mass_j']
         )
-        return distances
+
+        distances = distances.drop(columns='month')
+
+        return distances.set_index(
+            ['date', 'stock_i', 'stock_j']
+        ).sort_index()
 
     def _calculate_gravity(self, df:pd.DataFrame) -> pd.Series:
         """
