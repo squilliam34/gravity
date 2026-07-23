@@ -500,9 +500,9 @@ class Cluster:
 
         df['Distance'] = df['factor distance'] * df['semantic distance']
 
-        df = df[['date', 'stock_i', 'stock_j', 'Distance']]
+        df = df[['month', 'stock_i', 'stock_j', 'Distance']]
 
-        df.set_index(['date', 'stock_i', 'stock_j'], inplace=True)
+        df.set_index(['month', 'stock_i', 'stock_j'], inplace=True)
 
         df.sort_index(inplace=True)
         return df
