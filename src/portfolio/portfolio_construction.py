@@ -248,7 +248,9 @@ def extract_leaders(
 
 def construct_portfolio(
     year:int,
-    freq:str
+    freq:str,
+    schema:str='equal',
+    benchmark:str='^GSPC'
 ):
     leaders = extract_leaders(year=year, freq=freq)
     period_end = create_end_date(year)
@@ -274,7 +276,7 @@ def construct_portfolio(
 
         weights = weight_portfolio(
             tickers,
-            schema='equal'
+            schema=schema
         )
 
         holding_periods.append(
@@ -284,4 +286,6 @@ def construct_portfolio(
             )
         )
 
-    return Portfolio(holding_periods)
+    strategy_id = f'{schema}_{freq}'
+
+    return Portfolio(holding_periods, strategy_id, benchmark)

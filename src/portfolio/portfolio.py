@@ -115,6 +115,7 @@ class Portfolio:
     def __init__(
         self,
         periods: Iterable['HoldingPeriod'],
+        strategy_id : str,
         benchmark: str = '^GSPC'
     ) -> None:
         """
@@ -127,6 +128,7 @@ class Portfolio:
         """
         self.benchmark = benchmark
         self.periods = periods
+        self.strategy_id = strategy_id
 
         self.start_date = min(
             p.period[0]
@@ -141,13 +143,13 @@ class Portfolio:
         # Store prices for every stock in the portfolio
         # across the period regardless of holding times
         self.prices = None
+        self.benchmark_prices = None
 
         self.portfolio_returns = None
         self.benchmark_returns = None
 
     def load_prices(
         self, 
-        benchmark: str = '^GSPC'
     ) -> pd.DataFrame:
         """
         Load (and cache) price series for all tickers and the benchmark.
@@ -168,18 +170,25 @@ class Portfolio:
         if self.prices is not None:
             return self.prices
 
-        cache_dir = (
+        price_dir = (
             DATA_DIR
-            / 'portfolio'
+            / 'portfolios'
+            / f'{self.strategy_id}'
             / f'{pd.Timestamp(self.start_date).strftime('%Y-%m-%d')}_'
               f'{pd.Timestamp(self.end_date).strftime('%Y-%m-%d')}'
-            / 'prices'
         )
+        price_dir.mkdir(parents=True, exist_ok=True)
+        price_path = price_dir / 'prices.csv'
 
-        cache_dir.mkdir(parents=True, exist_ok=True)
-
-        price_path = cache_dir / 'prices.csv'
-        benchmark_path = cache_dir / 'benchmark.csv'
+        benchmark_dir = (
+            DATA_DIR
+            / 'benchmarks'
+            / f'{self.benchmark}'
+            / f'{pd.Timestamp(self.start_date).strftime('%Y-%m-%d')}_'
+              f'{pd.Timestamp(self.end_date).strftime('%Y-%m-%d')}'
+        )
+        benchmark_dir.mkdir(parents=True, exist_ok=True)
+        benchmark_path = benchmark_dir / 'benchmark.csv'
 
         # Check cache
         if price_path.exists(): 
@@ -214,7 +223,7 @@ class Portfolio:
 
         else:
             self.benchmark_prices = yf.download(
-                benchmark,
+                self.benchmark,
                 start=self.start_date,
                 end=self.end_date,
                 auto_adjust=True,
