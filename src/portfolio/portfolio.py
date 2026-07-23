@@ -115,16 +115,20 @@ class Portfolio:
     def __init__(
         self,
         periods: Iterable['HoldingPeriod'],
-        strategy_id : str,
+        strategy_id: str,
         benchmark: str = '^GSPC'
     ) -> None:
         """
         Initialize the portfolio.
 
         Args:
-        periods (Iterable[HoldingPeriod]): Iterable of `HoldingPeriod` instances defining the
+        periods (Iterable[HoldingPeriod]): Iterable of holding periods defining the
           strategy across time.
+        strategy_id (str): Identifier for the strategy.
         benchmark (str): Ticker symbol for the benchmark (default '^GSPC').
+
+        Returns:
+        None: The portfolio is initialized in place.
         """
         self.benchmark = benchmark
         self.periods = periods
@@ -148,19 +152,13 @@ class Portfolio:
         self.portfolio_returns = None
         self.benchmark_returns = None
 
-    def load_prices(
-        self, 
-    ) -> pd.DataFrame:
+    def load_prices(self) -> pd.DataFrame:
         """
         Load (and cache) price series for all tickers and the benchmark.
 
-        This method will look for cached CSV files under the configured
-        `DATA_DIR` and, if missing, download adjusted close prices using
-        `yfinance` and write them to cache.
-
-        Args:
-        benchmark (str): Benchmark ticker to download if benchmark cache is
-          missing (default '^GSPC').
+        This method checks for cached CSV files under the configured
+        `DATA_DIR` and, if missing, downloads adjusted close prices using
+        `yfinance` and writes them to cache.
 
         Returns:
         pd.DataFrame: Adjusted close prices for all tickers across the
@@ -358,7 +356,13 @@ class Portfolio:
     
     def calculate_cagr(self, returns: pd.Series) -> float:
         """
-        Calculate annualized compound growth rate.
+        Calculate the annualized compound growth rate for a return series.
+
+        Args:
+        returns (pd.Series): Daily or periodic portfolio returns indexed by date.
+
+        Returns:
+        float: Annualized compounded growth rate as a decimal.
         """
         years = (
             returns.index[-1] - returns.index[0]
@@ -371,7 +375,11 @@ class Portfolio:
 
     def calculate_cumulative_outperformance(self) -> float:
         """
-        Calculate total portfolio outperformance versus benchmark.
+        Calculate the total portfolio outperformance versus the benchmark.
+
+        Returns:
+        float: Relative cumulative performance difference between the portfolio
+          and benchmark.
         """
         portfolio_growth = (
             1 + self.portfolio_returns
@@ -388,7 +396,10 @@ class Portfolio:
 
     def calculate_annualized_alpha(self) -> float:
         """
-        Calculate annualized return difference versus benchmark.
+        Calculate the annualized return difference versus the benchmark.
+
+        Returns:
+        float: Portfolio annualized alpha over the benchmark.
         """
         portfolio_cagr = self.calculate_cagr(
             self.portfolio_returns
@@ -402,7 +413,11 @@ class Portfolio:
 
     def calculate_information_ratio(self) -> float:
         """
-        Calculate annualized information ratio.
+        Calculate the annualized information ratio.
+
+        Returns:
+        float: Annualized information ratio based on excess return versus the
+          benchmark.
         """
         excess_returns = (
             self.portfolio_returns
@@ -417,7 +432,10 @@ class Portfolio:
 
     def portfolio_performance(self, risk_free_rate: float) -> pd.DataFrame:
         """
-        Generate summary performance statistics.
+        Generate a summary table of portfolio performance metrics.
+
+        Args:
+        risk_free_rate (float): Annual risk-free rate expressed as a decimal.
 
         Returns:
         pd.DataFrame: Performance summary table.

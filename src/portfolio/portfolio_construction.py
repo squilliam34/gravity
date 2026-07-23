@@ -170,9 +170,9 @@ def get_period_leaders(
 
 def weight_portfolio(
     tickers: list[str],
-    schema: str='equal',
-    **kwargs
-)->dict[str, float]:
+    schema: str = 'equal',
+    **kwargs: object
+) -> dict[str, float]:
     """
     Return a mapping of ticker weights according to the requested schema.
 
@@ -182,7 +182,7 @@ def weight_portfolio(
     Args:
     tickers (list[str]): List of ticker symbols to weight.
     schema (str): Weighting schema name (default: 'equal').
-    **kwargs: Schema-specific keyword arguments (currently unused).
+    kwargs (dict[str, object]): Schema-specific keyword arguments (currently unused).
 
     Returns:
     dict: Mapping of ticker -> weight (floats summing to ~1.0).
@@ -223,6 +223,16 @@ def extract_leaders(
     year:int, 
     freq:str
 ) -> pd.DataFrame:
+    """
+    Extract cluster leaders for each rebalance period in a given year.
+
+    Args:
+    year (int): The year to analyze.
+    freq (str): Rebalancing frequency used to build the periods.
+
+    Returns:
+    pd.DataFrame: Leader selection results for each cluster and period.
+    """
 
     end_date = create_end_date(year)
 
@@ -251,7 +261,19 @@ def construct_portfolio(
     freq:str,
     schema:str='equal',
     benchmark:str='^GSPC'
-):
+) -> Portfolio:
+    """
+    Build a portfolio object from cluster leaders.
+
+    Args:
+    year (int): The year to backtest.
+    freq (str): Rebalancing frequency for the portfolio.
+    schema (str): Weighting scheme for the portfolio, defaulting to equal weight.
+    benchmark (str): Benchmark ticker symbol to compare against.
+
+    Returns:
+    Portfolio: A constructed portfolio containing the holding periods.
+    """
     leaders = extract_leaders(year=year, freq=freq)
     period_end = create_end_date(year)
     dates = sorted(leaders['date'].unique())
