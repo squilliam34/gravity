@@ -13,6 +13,7 @@ import hashlib
 from pathlib import Path
 import time
 from sklearn.decomposition import PCA
+from config import DATA_DIR
 
 load_dotenv()
 
@@ -49,8 +50,8 @@ GEMINI = genai.Client(
 ########## CACHE HELPERS ##########
 ###################################
 
-DESCRIPTION_CACHE_DIR = Path('./data/cache/descriptions')
-EMBEDDING_CACHE_DIR = Path('./data/cache/embeddings')
+DESCRIPTION_CACHE_DIR = DATA_DIR / 'cache' / 'descriptions'
+EMBEDDING_CACHE_DIR = DATA_DIR / 'cache' / 'embeddings'
 
 def text_hash(text: str) -> str:
     """
