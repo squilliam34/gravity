@@ -215,20 +215,28 @@ class Portfolio:
 
         if benchmark_path.exists():
 
-            self.benchmark_prices = pd.read_csv(
-                benchmark_path,
-                index_col=0,
-                parse_dates=True
-            ).squeeze('columns')
+            self.benchmark_prices = (
+                pd.read_csv(
+                    benchmark_path,
+                    index_col=0,
+                    parse_dates=True
+                )
+                .squeeze()
+            )
 
         else:
-            self.benchmark_prices = yf.download(
+            benchmark = yf.download(
                 self.benchmark,
                 start=self.start_date,
                 end=self.end_date,
                 auto_adjust=True,
                 progress=False
             )['Close']
+
+            if isinstance(benchmark, pd.DataFrame):
+                benchmark = benchmark.squeeze()
+
+            self.benchmark_prices = benchmark
 
             self.benchmark_prices.to_csv(benchmark_path)
         return self.prices
