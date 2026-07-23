@@ -2,6 +2,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from datetime import date
+from pandas.tseries.offsets import Day
 
 def calculate_daily_market_cap(ticker: str, 
                                start_date: str = '2000-01-01',
@@ -27,7 +28,13 @@ def calculate_daily_market_cap(ticker: str,
     company = yf.Ticker(ticker)
     income_stmt = company.quarterly_income_stmt
     shares = income_stmt[income_stmt.columns[0]]['Basic Average Shares']
-    prices = company.history(start = start_date, end = end_date)['Close']
+
+    # Need to include extra market cap data for rolling averages
+    history_start = (
+        pd.Timestamp(start_date)
+        - Day(45)
+    ).strftime('%Y-%m-%d')
+    prices = company.history(start = history_start, end = end_date)['Close']
     
     # Log market caps to compress space
     market_caps = np.log((shares*prices))
@@ -60,4 +67,33 @@ def create_market_cap_df(tickers:list[str],
     mkt_cps = mkt_cps.reset_index()
     mkt_cps['date'] = pd.to_datetime(mkt_cps['date']).dt.tz_localize(None)
     mkt_cps = mkt_cps.set_index(['date','ticker'])
+
+    # Calculate rolling period monthly average
+    mkt_cps = (
+        mkt_cps
+        .groupby(level='ticker')['market_cap']
+        .rolling(window=21, min_periods=21)
+        .mean()
+        .droplevel(0)
+        .to_frame()
+    )
+    # Trim back to desired start date
+    mkt_cps = mkt_cps.loc[
+        mkt_cps.index.get_level_values('date') >= pd.Timestamp(start_date)
+    ]
+
+    # Downsample data to only include first trading day of each month
+    dates = mkt_cps.index.get_level_values('date')
+    mkt_cps = (
+        mkt_cps
+        .assign(month=dates.to_period('M'))
+        .reset_index()
+        .sort_values('date')
+        .groupby(['month', 'ticker'], as_index=False)
+        .first()
+        .drop(columns='month')
+        .set_index(['date', 'ticker'])
+        .sort_index()
+    )
+
     return mkt_cps
