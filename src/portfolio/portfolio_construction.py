@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import networkx as nx
 from tqdm import tqdm
 from src.cluster import Cluster
@@ -124,6 +125,7 @@ def get_period_leaders(
             # No network found
             if G is None:
                 leaders.append({
+                    'rebalance_date': pd.Timestamp(period_start),
                     'date': network_date,
                     'cluster': cluster.label,
                     'leader': None,
@@ -135,6 +137,7 @@ def get_period_leaders(
             # Too few nodes / edges
             if len(G.nodes) < 2:
                 leaders.append({
+                    'rebalance_date': pd.Timestamp(period_start),
                     'date': network_date,
                     'cluster': cluster.label,
                     'leader': None,
@@ -149,6 +152,7 @@ def get_period_leaders(
                 leader, score = max(centrality_scores.items(), key=lambda x: x[1])
 
                 leaders.append({
+                    'rebalance_date': pd.Timestamp(period_start),
                     'date': network_date,
                     'cluster': cluster.label,
                     'leader': leader,
@@ -159,6 +163,7 @@ def get_period_leaders(
             except nx.NetworkXException:
 
                 leaders.append({
+                    'rebalance_date': pd.Timestamp(period_start),
                     'date': network_date,
                     'cluster': cluster.label,
                     'leader': None,
@@ -177,12 +182,14 @@ def weight_portfolio(
     Return a mapping of ticker weights according to the requested schema.
 
     Supported schemas:
-      - `equal`: assign equal weight to each ticker.
+    - `equal`: assign equal weight to each ticker.
+    - `cluster`: assign weight by the aggregate market cap of each leader's cluster.
 
     Args:
     tickers (list[str]): List of ticker symbols to weight.
     schema (str): Weighting schema name (default: 'equal').
-    kwargs (dict[str, object]): Schema-specific keyword arguments (currently unused).
+    kwargs (dict[str, object]): Schema-specific inputs. The `cluster` schema
+      requires a `market_caps` mapping keyed by leader ticker.
 
     Returns:
     dict: Mapping of ticker -> weight (floats summing to ~1.0).
@@ -193,6 +200,14 @@ def weight_portfolio(
 
     if schema == 'equal':
         return equal_weights(tickers)
+
+    if schema == 'cluster':
+        market_caps = kwargs.get('market_caps')
+        if market_caps is None:
+            raise ValueError(
+                'Cluster weighting requires a market_caps mapping.'
+            )
+        return cluster_weights(tickers, market_caps)
 
     raise ValueError(f'Unknown weighting schema: {schema}')
 
@@ -218,6 +233,73 @@ def equal_weights(
     weight = 1 / len(tickers)
 
     return {ticker: weight for ticker in tickers}
+
+
+def cluster_weights(
+    tickers: list[str],
+    market_caps: dict[str, float] | pd.Series
+) -> dict[str, float]:
+    """
+    Weight each cluster leader by its cluster's aggregate market cap.
+    
+    Args:
+    tickers (list[str]): Non-empty list of ticker symbols.
+    market_caps (dict[str, float] | pd.Series): Market caps for each ticker.
+
+    Returns:
+    dict: A dictionary of weightings for each ticker
+    """
+    if len(tickers) == 0:
+        raise ValueError('Cannot weight an empty portfolio.')
+
+    caps = pd.Series(market_caps, dtype='float64').reindex(tickers)
+
+    if caps.isna().any():
+        missing = caps.index[caps.isna()].tolist()
+        raise ValueError(f'Missing cluster market caps for: {missing}')
+    if (~np.isfinite(caps) | (caps <= 0)).any():
+        raise ValueError('Cluster market caps must be finite and positive.')
+
+    weights = caps / caps.sum()
+    return weights.to_dict()
+
+
+def get_cluster_market_cap(
+    cluster: Cluster,
+    date: str | pd.Timestamp
+) -> float:
+    """
+    Return the sum of constituent market caps at a cluster snapshot.
+    
+    Args:
+    cluster (Cluster): The cluster to retrieve the aggregated market cap for.
+    date (str | pd.Timestamp): The date in time to retrieve the aggregated market at.
+
+    Returns:
+    float: The aggregate market cap of the cluster.
+    """
+    snapshot_date = pd.Timestamp(date)
+    market_caps = cluster.get_market_caps(
+        start_date=snapshot_date.strftime('%Y-%m-%d'),
+        end_date=snapshot_date.strftime('%Y-%m-%d')
+    )
+
+    if market_caps.empty:
+        raise ValueError(
+            f'No market-cap data for cluster {cluster.label} on '
+            f'{snapshot_date:%Y-%m-%d}.'
+        )
+
+    # Market caps are stored as natural logs by create_market_cap_df.
+    raw_market_caps = np.exp(market_caps['market_cap'])
+    cluster_market_cap = raw_market_caps.sum(min_count=1)
+    if not np.isfinite(cluster_market_cap) or cluster_market_cap <= 0:
+        raise ValueError(
+            f'Invalid market-cap data for cluster {cluster.label} on '
+            f'{snapshot_date:%Y-%m-%d}.'
+        )
+
+    return float(cluster_market_cap)
 
 def extract_leaders(
     year:int, 
@@ -254,6 +336,18 @@ def extract_leaders(
 
     leaders = get_period_leaders(periods=periods, clusters=clusters)
 
+    successful = leaders['status'].eq('success')
+    cluster_lookup = {cluster.label: cluster for cluster in clusters}
+    leaders.loc[successful, 'cluster_market_cap'] = leaders.loc[
+        successful
+    ].apply(
+        lambda row: get_cluster_market_cap(
+            cluster_lookup[row['cluster']],
+            row['date']
+        ),
+        axis=1
+    )
+
     return leaders
 
 def construct_portfolio(
@@ -276,29 +370,39 @@ def construct_portfolio(
     """
     leaders = extract_leaders(year=year, freq=freq)
     period_end = create_end_date(year)
-    dates = sorted(leaders['date'].unique())
-
-    holding_periods = []
-
-    for i, start in enumerate(dates):
-
-        if i == len(dates) - 1:
-            end = period_end  # whatever your backtest end is
-        else:
-            end = dates[i + 1]
-
+    rebalance_dates = sorted(leaders['rebalance_date'].dropna().unique())
+    period_inputs = []
+    for rebalance_date in rebalance_dates:
         period_df = leaders[
-            (leaders['date'] == start)
+            (leaders['rebalance_date'] == rebalance_date)
             & (leaders['status'] == 'success')
         ].copy()
 
+        if period_df.empty:
+            continue
+
+        # Use the scheduled date to group leaders, but use the latest valid
+        # network date as the tradable start for the holding period.
+        start = pd.Timestamp(period_df['date'].max())
+        period_inputs.append((start, period_df))
+
+    holding_periods = []
+    for i, (start, period_df) in enumerate(period_inputs):
+        end = (
+            period_inputs[i + 1][0]
+            if i < len(period_inputs) - 1
+            else period_end
+        )
+
         tickers = period_df['leader'].tolist()
 
-        if not tickers: continue
+        if not tickers:
+            continue
 
         weights = weight_portfolio(
             tickers,
-            schema=schema
+            schema=schema,
+            market_caps=period_df.set_index('leader')['cluster_market_cap']
         )
 
         holding_periods.append(
