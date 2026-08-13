@@ -7,7 +7,7 @@ The gravity model of trade is a well known economic framework for modeling trade
 $\\ Trade_{ij} = A \times \frac{GDP_i \times GDP_j}{D_{ij}}$, where $A$ is a constant.
 
 ## Adoption For Stocks
-Similarly, this project will test whether a gravity model can be used as a more robust measure of correlation between stocks.
+Similarly, this project will test whether a gravity model can be used to model networks within the stock market.
 
 ### Mass
 The obvious choice for the "mass" of a stock is to use each stock's market capitalization. The other justification for using market cap as mass is that companies with larger market caps exhibit greater influence on their index and on similar constituents with a smaller market cap. 
@@ -21,16 +21,18 @@ Due to the large differences in scales of companies and their valuations, I chos
 ### Distance
 Deviating from the gravity model used for trade, I didn't want to use geographic locations to represent physical distance. For one, geographic distance is less and less of a barrier in today's world of multinational corporations and international supply chains. Secondly, distances between where companies are based doesn't tell that much. For example, both Bank of America and Honeywell are headquartered in Charlotte, but they fall within very different industries and as such, shouldn't be grouped together. As a result, I propose the following distance metrics: semantic similarity and differences in factors.
 
-In order to combine them, I used a time-varying weighted average between the 2: $\lambda * D_{factor} + (1 - \lambda) * D_{Similarity}$
+In order to combine them, I took the product between each distance measure. This ensured that 2 companies were required to  behave similarly and display structural similarity to have a small distance between them.
 
 #### Semantic Similarity
 Measuring distance by semantic similarity uses an NLP (Natural Language Processing) approach. For each stock in our universe, retrieve a description of the company and embed it into a vector of numerical values. Then, the distance between companies $i$ and $j$ can be found by calculating the cosine similarity, which takes the cosine of the angle between the 2 vectors, and subtracting it from 1. The idea is that the cosine of the angle between two vectors that are closer together/more similar will be closer to 1 so subtracting it from 1 will produce a smaller "distance". Similarly, the cosine of the angle between two vectors that are farther apart/less similar will be closer to 0 so subtracting it from 1 will produce a larger "distance".
 
 ##### Business Descriptions
-I had originally hoped to use 10-K business descriptions to produce more robust results. However, this was both computationally expensive due to their large size and proved to be challenging since 10-Ks are not formatted consistently, which made extracting the business description problematic -- even through a variety of web scraping approaches and API services. As a result, I decided to use company descriptions pulled from Yahoo Finance due to them offering consistent company descriptions that were available across their universe of coverage.
+To generate the most robust results, I wrote a script that would scrape the "Business Overview" from a company's annual 10-K filing. Due to companies businesses changing over time, I pulled these at different points in time: 2010, 2015, 2020, 2025. This enabled me to capture time varying changes in business models. 
+
+In some cases, my script was not able to successfully extract the "Business Overview", particularly in earlier years, so I manually filled them in from the `sec.gov` website.
 
 ##### Model Selection
-I experimented with various different HuggingFace models for embedding text. I originally used a general and lightweight model `sentence-transformers/all-MiniLM-L6-v2`. Despite its speed and efficiency of performance, the model seemed to be unable to capture more nuanced relationships when examining various distance scores. I then tried a more specialized model `FinLang/finance-embeddings-investopedia` in hopes that its specialized finance corpus would provide better distinction. However, in evaluating the results, it seemed overspecialize in finance and didn't differentiate between sectors as well. Finally, I settled on `sentence-transformers/all-mpnet-base-v2`. This model takes longer to run and requires more computing power, but it seemed best equipped to capture nuance between companies while still upholding fundamental relationships.
+Due to the potentially large context windows required to embed the "Business Overview" for a given company, I found that using a frontier model for embedding worked the best. Research online pointed me in the direction of the `Gemini` API for embedding. Not only is it known to perform well for semantic similarity tasks, but it also is typically cheaper than other frontier models.  
 
 #### Differences in Factors
 Aside from capturing structural differences, I also wanted to capture differences in price behavior as another dimension of similarity. To do this, I explored the idea of specifying a parsimonious multi-factor model inspired by empirical asset pricing models[^4]. The specification made use of market exposure, interest rate sensitivity, and momentum in the spirit of the market, style, and macro factors that are employed by institutional risk models like Barra, designed to capture major differences in macro sensitivity and trend-following behavior. Daily percentage returns of the S&P500 served as the market exposure factor. Daily absolute change in the 10 year treasury yield offered interest rate sensitivity. The momentum factor utilized a 12-1 month return spread in the spirit of the $WML$ factor used in the Carhart four-factor model[^5]. To implement this, at each point in the sample, I calculated the returns over the past 12 months (252 trading days) and omitted the most recent month (the last 21 trading days). Then for each day, returns across active stocks would be ranked, and the spread between the average returns of the first and last decile was calculated to be used as a momentum factor.
@@ -41,10 +43,30 @@ Behavioral distance is then measured by differences in stocks' exposures to thos
 
 However, after calculating distances, they were on a different scale from the cosine distances. To avoid having cosine distances be overshadowed, I transformed the factor distances using $1-e^{-x}$, as this helped to compress the distance space and also bounded distances within the range (0, 1).
 
-#### Lambda
-For Lambda, I wanted a measure that would vary over time and dynamically weight each distance factor depending on market conditions. This offered a more robust weighting system than arbitrarily weighting each factor. To do so, I chose to calculate $\lambda$ using the $VIX$, as my rationale was that during more volatile periods, the price behavior -- and therefore factor difference -- would be more important than structural differences between companies. However, the $VIX$ as itself does not neatly work as a weight since it scales from 0 to technically infinity. Additionally, if we treat the long term average of the $VIX$ as a baseline market regime where each distance factor should be weighted more or less evenly, the long term average of ~19 - ~21 doesn't offer convenient weighting.
+## Time-Varying Networks
+I reconstructed clusters every 5 years, in accordance with my business overviews. This allowed me to capture differences that may have arisen from changing business models. For example, `AMZN` is a very different company with their current cloud computing business than they were in their early e-commerce days. 
 
-To address these issues, I passed the $VIX$ value through a sigmoid function of the form $\frac{1}{1 + e^{-k * \frac{VIX}{\text{threshold}}}}$. Here, $k$ works as a measure of how steep the sigmoid function is and how reactive $\lambda$ is to a change in the $VIX$. $\text{threshold}$ serves to scale the $VIX$ down, based on how far away from the long term average the current measure is.
+### Constituents
+Determining constituents proved to be a problem. I could not simply use today's S&P 500 constituents, as they aren't representative of the S&P 500 from 15 years ago. Not to mention that in my later attempts at portfolio construction, using current constituents would introduce survivorship bias, as only the companies that are still publicly traded are available. 
+
+### Clustering
+For my clustering, due to the high dimensional nature of the embeddings, I need to employ some form of dimensionality reduction in order to avoid the curse of dimensionality. I chose UMAP for this process since it helps to ensure separation in points by grouping close points closer and far points farther. It also is generally thought to preserve the global shape of the data well. 
+
+After applying UMAP to my data, I employed Hierarchicial Density based Spatial Clustering of Applications with Noise (HDBSCAN), which I chose for several reasons. For one, it is non-parametric, which was very important to me. The market landscape can change drastically across periods, and relying on a finely tuned clustering algorithm could mean economically meaningful clusters in one year, and nonsensical clusters in another. Secondly, it also manages data with varying levels of density well with its hierarchical structure. This is important since some clusters might be tighter grouped together than others. Finally, I could enforce cluster membership for all points by assigning points that were classified as noise to the cluster that HDBSCAN gave as the highest probability grouping.
+
+### Intra-Cluster Gravity
+After clustering, I chose to calculate "gravity" within each cluster and form networks. This was primarily motivated by the idea that within an industry (or cluster in our case), a larger company can influence smaller companies [^2]. Therefore, by calculating gravity within a cluster, I ideally would have been able to better isolate the "gravitational" relationship between alike companies.
+
+## Portfolio Construction
+To test whether the gravity networks contained useful information for portfolio construction, I used them to identify a “leader” within each cluster. For every company, I calculated its total gravitational connection to the other companies in its cluster. A firm with high within-cluster gravity is both economically significant and closely connected to its peers through the structural and factor-based dimensions captured by the model.
+
+My intuition was that these highly central firms could serve as representatives of their respective clusters. Because a cluster leader is strongly connected to many of the companies around it, its returns may reflect the cluster’s shared economic exposures more closely than those of a peripheral firm, whose performance may be driven by more idiosyncratic factors. Selecting one leader from each cluster therefore creates a portfolio with exposure to the market’s different underlying groups while limiting redundancy among companies with similar characteristics.
+
+Here, “leader” does not necessarily mean that the company causally drives the returns of its peers. It refers more narrowly to the company occupying the most central position in the gravity network. The primary hypothesis is not necessarily that cluster leaders will outperform the market, but that they can provide a compressed representation of it. If each leader successfully reflects the shared exposures of its cluster, a portfolio containing relatively few leaders may reproduce much of the S&P 500’s behavior. Evidence in favor of this hypothesis would include low tracking error, similar market beta, comparable volatility and drawdowns, and stable performance across market regimes.
+
+The appropriate weighting scheme depends on the question being tested. An equal-weighted portfolio gives every cluster equal importance, while a market-cap-weighted portfolio concentrates exposure in the largest selected leaders. A third approach assigns each leader the aggregate S&P 500 weight of the cluster it represents. This cluster-weighted construction provides the most direct test of whether a single central firm can serve as a proxy for its broader group.
+
+### Equal Weighting
 
 [^1]: Tinbergen, J. (1962). Shaping the world economy: Suggestions for an international economic policy. Twentieth Century Fund.
 
