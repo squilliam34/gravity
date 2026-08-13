@@ -1,5 +1,6 @@
 import pandas as pd
 import yfinance as yf
+from functools import lru_cache
 from src.cluster import Cluster
 from config import DATA_DIR
 
@@ -13,6 +14,7 @@ def create_end_date(year:int):
 
     return end_date
 
+@lru_cache(maxsize=None)
 def get_risk_free_rate(
     start_date: str,
     end_date: str,
@@ -41,8 +43,20 @@ def get_risk_free_rate(
         progress=False,
     )
 
-    if tnx.empty:
-        raise ValueError('No ^TNX data returned.')
+    if not tnx.empty:
+        return (tnx['Close'] / 100).mean().item()
 
-    return (tnx['Close'] / 100).mean().item()
-     
+    # Yahoo occasionally returns no history for the ^TNX index. Fall back to
+    # the Federal Reserve's equivalent daily 10-year Treasury series while
+    # preserving this function's public interface.
+    url = (
+        'https://fred.stlouisfed.org/graph/fredgraph.csv'
+        f'?id=DGS10&cosd={start_date}&coed={end_date}'
+    )
+    treasury = pd.read_csv(url)
+    yields = pd.to_numeric(treasury['DGS10'], errors='coerce').dropna()
+
+    if yields.empty:
+        raise ValueError('No 10-year Treasury yield data returned.')
+
+    return (yields / 100).mean()
